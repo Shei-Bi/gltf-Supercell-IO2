@@ -1,8 +1,9 @@
 from .constants import OdinAttributeFormat as Format
+from .constants import OdinAttributeType as Type
 import numpy as np
 
 class OdinAttribute:
-    def __init__(self, buffer: np.array, format: Format, offset: int, element_offset: int, stride: int) -> None:
+    def __init__(self, buffer: np.array, format: Format, type: Type, offset: int, element_offset: int, stride: int) -> None:
         self.element_offset = element_offset
         self.offset = offset
         self.stride = stride

@@ -30,6 +30,11 @@ class glTFSupercellImporterProperties(PropertyGroup):
         description='Configures color space required for correct display of SC shaders',
         default=True
     )
+    
+    set_scene_framerate: BoolProperty(
+        description='Configures scene FPS according to gltf animation (if any)',
+        default=True
+    )
 
 def draw_import(context: Context, layout: UILayout):
     header, body = layout.panel(glTF_extension_name, default_closed=False)
@@ -42,3 +47,4 @@ def draw_import(context: Context, layout: UILayout):
         body.prop(props, 'single_skeleton', text="Import as single skeleton")
         body.prop(props, 'better_settings', text="Use custom glTF importer settings")
         body.prop(props, 'adjust_colorspace', text="Adjust color space")
+        body.prop(props, 'set_scene_framerate', text="Set scene FPS")

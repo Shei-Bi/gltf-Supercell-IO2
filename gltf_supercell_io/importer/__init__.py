@@ -4,19 +4,25 @@ from ..com import glTF_extension_name, glTF_material_extension_name
 from ..com.odin.constants import OdinAttributeFormat, OdinAttributeType
 from ..com.odin.attribute import OdinAttribute
 from ..com.materials import ScShaderMaterial
+from ..com.animation.reader import OdinAnimationReader
+from ..com.animation.packedReader import TranslationChannels, ScaleChannels, RotationChannels
 
 from ..com.shader.builder import ShaderPresetType
 from ..com.shader.unlit import UnlitPreset
 from ..com.shader.brawlStarsLegacy import BrawlStarsLegacy
+from ..com.animation import OdinAnimation
 
 from io_scene_gltf2.io.com.gltf2_io_extensions import Extension
 from io_scene_gltf2.io.imp.gltf2_io_gltf import glTFImporter, ImportError
-from io_scene_gltf2.io.com.gltf2_io import Accessor, Material, Node, Mesh, MeshPrimitive, Scene, Skin
+from io_scene_gltf2.io.com.gltf2_io import Accessor, Material, Node, Mesh, MeshPrimitive, Scene, Skin, Animation
 from io_scene_gltf2.blender.imp.vnode import VNode
 from io_scene_gltf2.io.imp.gltf2_io_binary import BinaryData
+from io_scene_gltf2.blender.imp.animation_utils import get_or_create_action_and_slot, make_fcurve
 
 from typing import List
 import numpy as np
+from pathlib import Path
+from mathutils import Vector
 
 
 class glTF2ImportUserExtension:
@@ -25,21 +31,24 @@ class glTF2ImportUserExtension:
         self.extensions = [
             # Odin extension with custom meshes and animations store method
             Extension(name=glTF_extension_name, extension={}, required=True),
-            
+
             # Custom materials
-            Extension(name=glTF_material_extension_name, extension={}, required=False)
+            Extension(name=glTF_material_extension_name,
+                      extension={}, required=False)
         ]
-        
+
     def valid_gltf(self, gltf: glTFImporter):
+        """Returns True if gltf is valid Supercell glTF and is subject to further processing"""
         required = gltf.data.extensions_required or []
         used = gltf.data.extensions_used or []
         has_extension = glTF_extension_name in required
         has_shader = glTF_material_extension_name in used
-        
+
         return has_extension or has_shader
 
     def process_accessors(self, gltf: glTFImporter):
-        """Supercell uses special component types for some accessors to optimize gpu memory usage, which is not standard and needs to be converted to normal here"""
+        """Supercell uses special component types for some accessors to optimize gpu memory usage, 
+            which is not standard and needs to be converted to normal here"""
         # Exclusive Accessor Component Types
         # 1 - Float Vector 3
         # 2 - Float Vector 4
@@ -50,6 +59,7 @@ class glTF2ImportUserExtension:
             accessor.component_type = accessor.component_type & 0x0000FFFF
 
     def get_extension_descriptor(self, gltf: glTFImporter) -> dict | None:
+        """Returns SC_odin_format extension descriptor, if exists, otherwise returns None"""
         extensions: dict = gltf.data.extensions
         if (extensions is None):
             return None
@@ -57,7 +67,8 @@ class glTF2ImportUserExtension:
         return extensions.get(glTF_extension_name, None)
 
     def move_materials(self, gltf: glTFImporter):
-        """Supercell stores their materials in extensions, so we need to move them to the main materials list if there is a need"""
+        """Supercell stores their materials in extensions, 
+            so we need to move them to the main materials list if there is a need"""
         descriptor = self.get_extension_descriptor(gltf)
         if (descriptor is None):
             return
@@ -101,7 +112,7 @@ class glTF2ImportUserExtension:
 
         root_nodes = []
         nodes: List[Node] = gltf.data.nodes or []
-        skins: List[Skin] = gltf.data.skins or []
+        skins = gltf.data.skins = gltf.data.skins or []
 
         # Fix for scene nodes
         if (gltf.data.scenes is None):
@@ -121,21 +132,29 @@ class glTF2ImportUserExtension:
                     break
 
         if (self.properties.single_skeleton and len(root_nodes)):
+            # Most of animations doesn't have actual skin
+            # We should create placeholder one, so blender could process it properly
+            if (len(skins) == 0):
+                joints = [i for i, node in enumerate(
+                    gltf.data.nodes) if node.mesh is None and node.camera is None and node.skin is None]
+                skins.append(Skin.from_dict({"joints": joints}))
+
             if (len(root_nodes) == 1):
                 for skin in skins:
                     skin.skeleton = root_nodes[0]
             else:
                 children_mapping = {key: [] for key in root_nodes}
+
                 def visit(key: int, node_index: int):
                     childrens = gltf.data.nodes[node_index].children or []
-                    
+
                     for idx in childrens:
                         children_mapping[key].append(idx)
                         visit(key, idx)
-                
+
                 for key in root_nodes:
                     visit(key, key)
-                
+
                 for skin in skins:
                     for key, childrens in children_mapping.items():
                         if (any(i in childrens for i in skin.joints or [])):
@@ -154,12 +173,31 @@ class glTF2ImportUserExtension:
         # Also very useful thing for mesh
         gltf.import_settings['merge_vertices'] = True
 
+    def move_animation(self, gltf: glTFImporter):
+        """Supercell also stores animations in the extension, 
+            so they also need to be moved to the animations for proper processing. 
+            Only one animation per file is possible."""
+        descriptor = self.get_extension_descriptor(gltf)
+        if (descriptor is None):
+            return
+
+        animation = descriptor.get("animation")
+        if (animation is None):
+            return
+
+        name = Path(gltf.filename).stem
+        animations = gltf.data.animations = gltf.data.animations or []
+        animations.append(
+            Animation([], {glTF_extension_name: animation}, None, name, [])
+        )
+
     def gather_import_gltf_before_hook(self, gltf: glTFImporter):
         if (not self.valid_gltf(gltf)):
             return
 
         self.process_accessors(gltf)
         self.move_materials(gltf)
+        self.move_animation(gltf)
 
         self.process_nodes_extension(gltf)
         self.do_final_fixups(gltf)
@@ -194,7 +232,7 @@ class glTF2ImportUserExtension:
 
         name = OdinAttributeType.to_attribute_name(attribute_type)
         data = OdinAttribute(
-            buffer_data, attribute_format, offset, element_offset, stride
+            buffer_data, attribute_format, attribute_type, offset, element_offset, stride
         )
 
         return (name, data)
@@ -274,56 +312,185 @@ class glTF2ImportUserExtension:
     def gather_import_material_before_hook(self, gltf_material: Material, vertex_color, gltf: glTFImporter):
         if (not self.valid_gltf(gltf)):
             return
-        
+
         extensions = gltf_material.extensions = gltf_material.extensions or {}
         descriptor: dict = extensions.get(glTF_material_extension_name)
         if (descriptor is None):
             return
-        
+
         material = ScShaderMaterial()
         material.from_dict(gltf, descriptor)
         extensions[glTF_material_extension_name] = material
         gltf_material.name = material.name
-        
+
     def gather_import_material_after_hook(self, gltf_material: Material, vertex_color, blender_mat: bpy.types.Material, gltf: glTFImporter):
         if (not self.valid_gltf(gltf)):
             return
-        
+
         extensions = gltf_material.extensions or {}
-        material: ScShaderMaterial = extensions.get(glTF_material_extension_name)
+        material: ScShaderMaterial = extensions.get(
+            glTF_material_extension_name)
         if (material is None):
             return
-        
+
         preset = None
         match(self.properties.shader_preset):
             case ShaderPresetType.UNLIT:
                 preset = UnlitPreset
-            
+
             case ShaderPresetType.BRAWL_STARS_LEGACY:
                 preset = BrawlStarsLegacy
             case _:
                 raise NotImplementedError()
-        
+
         # Cleanup material from glTF fallback and prepare for our own processing
         gltf_material.pbr_metallic_roughness.blender_nodetree = None
         gltf_material.pbr_metallic_roughness.blender_mat = None
         if not blender_mat.node_tree:
             blender_mat.use_nodes = True
-            
+
         tree = blender_mat.node_tree
         tree.nodes.clear()
-        
+
         preset_instance = preset(material, blender_mat)
-        
+
         # Selected preset creation
         preset_instance.create_material()
-        
+
         # Marking shader as valid SupercellIO shader
         preset_instance.shader["$SupercellIO"] = self.properties.shader_preset
-        
+
     def gather_import_scene_after_nodes_hook(self, gltf_scene, blender_scene: bpy.types.Scene, gltf):
         if (not self.valid_gltf(gltf)):
             return
-        
+
         if (self.properties.adjust_colorspace):
             blender_scene.view_settings.view_transform = "Raw"
+    
+    def do_animation_channel(self, animation: OdinAnimationReader, duration: int, path: str, values: np.array, anim_idx: int, node_idx: int, gltf: glTFImporter):
+        vnode = gltf.vnodes[node_idx]
+        
+        action, slot = get_or_create_action_and_slot(gltf, node_idx, anim_idx, path)
+        
+        if path == "translation":
+            blender_path = "location"
+            group_name = "Object Transforms"
+            num_components = 3
+            values = [gltf.loc_gltf_to_blender(vals) for vals in values]
+            values = vnode.base_locs_to_final_locs(values)
+
+        elif path == "rotation":
+            blender_path = "rotation_quaternion"
+            group_name = "Object Transforms"
+            num_components = 4
+            values = [gltf.quaternion_gltf_to_blender(vals) for vals in values]
+            values = vnode.base_rots_to_final_rots(values)
+
+        elif path == "scale":
+            blender_path = "scale"
+            group_name = "Object Transforms"
+            num_components = 3
+            values = [gltf.scale_gltf_to_blender(vals) for vals in values]
+            values = vnode.base_scales_to_final_scales(values)
+
+        # Objects parented to a bone are translated to the bone tip by default.
+        # Correct for this by translating backwards from the tip to the root.
+        if vnode.type == VNode.Object and path == "translation":
+            if vnode.parent is not None and gltf.vnodes[vnode.parent].type == VNode.Bone:
+                bone_length = gltf.vnodes[vnode.parent].bone_length
+                off = Vector((0, -bone_length, 0))
+                values = [vals + off for vals in values]
+
+        if vnode.type == VNode.Bone:
+            # Need to animate the pose bone when the node is a bone.
+            group_name = vnode.blender_bone_name
+            blender_path = 'pose.bones["%s"].%s' % (
+                bpy.utils.escape_identifier(vnode.blender_bone_name),
+                blender_path
+            )
+
+            # We have the final TRS of the bone in values. We need to give
+            # the TRS of the pose bone though, which is relative to the edit
+            # bone.
+            #
+            #     Final = EditBone * PoseBone
+            #   where
+            #     Final =    Trans[ft] Rot[fr] Scale[fs]
+            #     EditBone = Trans[et] Rot[er]
+            #     PoseBone = Trans[pt] Rot[pr] Scale[ps]
+            #
+            # Solving for PoseBone gives
+            #
+            #     pt = Rot[er^{-1}] (ft - et)
+            #     pr = er^{-1} fr
+            #     ps = fs
+
+            if path == 'translation':
+                edit_trans, edit_rot = vnode.editbone_trans, vnode.editbone_rot
+                edit_rot_inv = edit_rot.conjugated()
+                values = [
+                    edit_rot_inv @ (trans - edit_trans)
+                    for trans in values
+                ]
+
+            elif path == 'rotation':
+                edit_rot = vnode.editbone_rot
+                edit_rot_inv = edit_rot.conjugated()
+                values = [
+                    edit_rot_inv @ rot
+                    for rot in values
+                ]
+
+            elif path == 'scale':
+                pass  # no change needed
+
+        # To ensure rotations always take the shortest path, we flip
+        # adjacent antipodal quaternions.
+        if path == 'rotation':
+            for i in range(1, len(values)):
+                if values[i].dot(values[i - 1]) < 0:
+                    values[i] = -values[i]
+
+        fps = (bpy.context.scene.render.fps * bpy.context.scene.render.fps_base)
+        
+        coords = [0] * (2 * duration)
+        coords[::2] = ((animation.frame_spf * i) * fps for i in range(duration))
+        
+        for i in range(0, num_components):
+            coords[1::2] = (vals[i] for vals in values)
+            make_fcurve(
+                action,
+                slot,
+                coords,
+                data_path=blender_path,
+                index=i,
+                group_name=group_name,
+            )
+    
+    def gather_import_animation_before_hook(self, anim_idx: int, gltf: glTFImporter):
+        extensions = gltf.data.animations[anim_idx].extensions or {}
+        descriptor = extensions.get(glTF_extension_name)
+        if (descriptor is None): return
+
+        animation = OdinAnimation.Create(gltf, descriptor)
+        if (self.properties.set_scene_framerate):
+            bpy.context.scene.render.fps = int(animation.frame_rate)
+        
+        for i, node_idx in enumerate(animation.used_nodes):
+            duration = animation.keyframe_mapping[i]
+            translation = animation.get_translation(i)
+            rotation = animation.get_rotation(i)
+            scale = animation.get_scale(i)
+
+            if (translation is not None):
+                translation = [list(translation[c][f] for c in range(TranslationChannels)) for f in range(duration)]
+                self.do_animation_channel(animation, duration, "translation", translation, anim_idx, node_idx, gltf)
+                
+            if (rotation is not None):
+                rotation = [list(rotation[c][f] for c in range(RotationChannels)) for f in range(duration)]
+                self.do_animation_channel(animation, duration, "rotation", rotation, anim_idx, node_idx, gltf)
+                
+            if (scale is not None):
+                scale = [list(scale[c][f] for c in range(ScaleChannels)) for f in range(duration)]
+                self.do_animation_channel(animation, duration, "scale", scale, anim_idx, node_idx, gltf)
+        

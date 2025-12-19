@@ -367,7 +367,7 @@ class glTF2ImportUserExtension:
         if (self.properties.adjust_colorspace):
             blender_scene.view_settings.view_transform = "Raw"
     
-    def do_animation_channel(self, animation: OdinAnimationReader, duration: int, path: str, values: np.array, anim_idx: int, node_idx: int, gltf: glTFImporter):
+    def do_animation_channel(self, animation: OdinAnimationReader, duration: int, fps: float, path: str, values: np.array, anim_idx: int, node_idx: int, gltf: glTFImporter):
         vnode = gltf.vnodes[node_idx]
         
         action, slot = get_or_create_action_and_slot(gltf, node_idx, anim_idx, path)
@@ -451,7 +451,7 @@ class glTF2ImportUserExtension:
                 if values[i].dot(values[i - 1]) < 0:
                     values[i] = -values[i]
 
-        fps = (bpy.context.scene.render.fps * bpy.context.scene.render.fps_base)
+        fps = (fps * bpy.context.scene.render.fps_base)
         
         coords = [0] * (2 * duration)
         coords[::2] = ((animation.frame_spf * i) * fps for i in range(duration))
@@ -471,11 +471,15 @@ class glTF2ImportUserExtension:
         extensions = gltf.data.animations[anim_idx].extensions or {}
         descriptor = extensions.get(glTF_extension_name)
         if (descriptor is None): return
-
         animation = OdinAnimation.Create(gltf, descriptor)
-        if (self.properties.set_scene_framerate):
-            bpy.context.scene.render.fps = int(animation.frame_rate)
         
+        fps = bpy.context.scene.render.fps
+        if (self.properties.fps_source == 'SEQUENCE'):
+            bpy.context.scene.render.fps = int(animation.frame_rate)
+            fps = animation.frame_rate
+        elif (self.properties.fps_source == 'CUSTOM'):
+            fps = self.properties.fps_custom
+
         for i, node_idx in enumerate(animation.used_nodes):
             duration = animation.keyframe_mapping[i]
             translation = animation.get_translation(i)
@@ -484,13 +488,13 @@ class glTF2ImportUserExtension:
 
             if (translation is not None):
                 translation = [list(translation[c][f] for c in range(TranslationChannels)) for f in range(duration)]
-                self.do_animation_channel(animation, duration, "translation", translation, anim_idx, node_idx, gltf)
+                self.do_animation_channel(animation, duration, fps, "translation", translation, anim_idx, node_idx, gltf)
                 
             if (rotation is not None):
                 rotation = [list(rotation[c][f] for c in range(RotationChannels)) for f in range(duration)]
-                self.do_animation_channel(animation, duration, "rotation", rotation, anim_idx, node_idx, gltf)
+                self.do_animation_channel(animation, duration, fps, "rotation", rotation, anim_idx, node_idx, gltf)
                 
             if (scale is not None):
                 scale = [list(scale[c][f] for c in range(ScaleChannels)) for f in range(duration)]
-                self.do_animation_channel(animation, duration, "scale", scale, anim_idx, node_idx, gltf)
+                self.do_animation_channel(animation, duration, fps, "scale", scale, anim_idx, node_idx, gltf)
         

@@ -8,8 +8,8 @@ from ..com.animation.reader import OdinAnimationReader
 from ..com.animation.packedReader import TranslationChannels, ScaleChannels, RotationChannels
 
 from ..com.shader.builder import ShaderPresetType
-from ..com.shader.unlit import UnlitPreset
-from ..com.shader.brawlStarsLegacy import BrawlStarsLegacy
+from ..com.shader_presets.unlit import UnlitPreset
+from ..com.shader_presets.brawlStarsLegacy import BrawlStarsLegacy
 from ..com.animation import OdinAnimation
 
 from io_scene_gltf2.io.com.gltf2_io_extensions import Extension
@@ -356,9 +356,6 @@ class glTF2ImportUserExtension:
 
         # Selected preset creation
         preset_instance.create_material()
-
-        # Marking shader as valid SupercellIO shader
-        preset_instance.shader["$SupercellIO"] = self.properties.shader_preset
 
     def gather_import_scene_after_nodes_hook(self, gltf_scene, blender_scene: bpy.types.Scene, gltf):
         if (not self.valid_gltf(gltf)):

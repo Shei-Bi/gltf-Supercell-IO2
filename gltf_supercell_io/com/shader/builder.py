@@ -133,7 +133,7 @@ class ShaderBuilder:
         socket = self.shader.inputs[index]
         socket.default_value = prop.status
 
-    def instantiate_shader(self, id: str, name: str) -> ShaderNodeGroup:
+    def load_shader_tree(self, id: str) -> bpy.types.NodeTree:
         asset = bpy.data.node_groups.get(id)
         if (asset is None):
             with bpy.data.libraries.load(ShaderBuilder.LibraryPath, link=True, assets_only=True) as (data_from, data_to):
@@ -142,14 +142,24 @@ class ShaderBuilder:
             asset = bpy.data.node_groups.get(id)
             if asset is None:
                 raise ImportError("Failed to instantiate Supercell IO shader")
-
+            
+        return asset
+        
+    def instantiate_shader(self, id: str, name: str) -> ShaderNodeGroup:
+        tree = self.load_shader_tree(id)
         shader: ShaderNodeGroup = self.material.node_tree.nodes.new(
-            "ShaderNodeGroup"
+            "ShaderNodeScShader"
         )
-        shader.node_tree = asset
+        
+        props = bpy.context.scene.glTFSupercellImporterProperties
+        preset_id = props.shader_preset
+        
         shader.label = name
-        shader.location = 40 - asset.default_group_node_width, 100
-        shader.width = asset.default_group_node_width
+        shader.location = 40 - tree.default_group_node_width, 100
+        shader.width = tree.default_group_node_width
+        
+        shader.preset_tree = tree
+        shader.preset_id = preset_id
 
         return shader
 

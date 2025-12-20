@@ -4,7 +4,7 @@ from .variables import ScShaderVariables, ShaderProperty
 from enum import IntEnum
 
 class ScBlendMode(IntEnum):
-    Unk = 5
+    Unk = 5 # Seaweed?
     Opaque = 4
     Clip = 2 # Not sure about that
     Hashed = 1 # And this too

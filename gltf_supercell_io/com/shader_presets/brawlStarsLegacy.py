@@ -2,6 +2,9 @@ from ..shader.builder import ShaderBuilder
 
 
 class BrawlStarsLegacy(ShaderBuilder):
+    shader_idname = "ScLegacyBrawlStarsShader"
+    shader_label = "Brawl Stars Legacy Shader"
+
     CONSTANT_MAP = {
         0: "AMBIENT",
         2: "DIFFUSE",
@@ -31,10 +34,7 @@ class BrawlStarsLegacy(ShaderBuilder):
         13: "opacityTex2D"
     }
 
-    def create_shader(self):
-        self.shader = self.instantiate_shader(
-            "ScLegacyBrawlStarsShader", "Brawl Stars Legacy Shader")
-
+    def set_shader_props(self):
         for idx, key in BrawlStarsLegacy.CONSTANT_MAP.items():
             self.set_constant_prop(key, idx)
 

@@ -1,23 +1,15 @@
 import bpy
-import os
 from bpy.types import ShaderNodeGroup, ShaderNodeTexImage, ShaderNodeOutputMaterial
 from typing import Tuple
-from enum import StrEnum
 from ..materials import ScShaderMaterial, ScBlendMode
 from ..materials.variables import ShaderFloatVectorProperty, ShaderFloatProperty, ShaderTextureProperty, ShaderBooleanProperty, ShaderProperty
-
-
-class ShaderPresetType(StrEnum):
-    UNLIT = "Unlit"
-    BRAWL_STARS_LEGACY = "LegacyBrawlStars"
+from .loader import LibraryLoader
 
 
 class ShaderBuilder:
-    LibraryName = "SupercellIO"
-    BaseDirectory = os.path.dirname(os.path.abspath(__file__))
-    LibraryPath = os.path.join(
-        BaseDirectory, "library", "supercell_io_shaders.blend")
-
+    shader_idname = ""
+    shader_label = ""
+    
     def __init__(self, sc_material: ScShaderMaterial, material: bpy.types.Material):
         self.sc_material = sc_material
         self.material = material
@@ -34,12 +26,13 @@ class ShaderBuilder:
         )
         output.location = 200, 100
 
-        self.create_shader()
+        self.shader = self.setup_shader()
+        self.set_shader_props()
         tree.links.new(output.inputs[0], self.shader.outputs[0])
 
         if (len(self.sc_material.unused_constants)):
             self.shader["$constants"] = self.sc_material.unused_constants
-            
+
         for variable in self.sc_material.unused_variables:
             self.set_raw_shader_prop(variable)
 
@@ -121,7 +114,7 @@ class ShaderBuilder:
 
         socket = self.shader.inputs[index]
         socket.default_value = prop.number
-        
+
     def set_bool_prop(self, name: str, index: int):
         prop: ShaderBooleanProperty = self.sc_material.get_property(
             name, ShaderBooleanProperty
@@ -133,35 +126,16 @@ class ShaderBuilder:
         socket = self.shader.inputs[index]
         socket.default_value = prop.status
 
-    def load_shader_tree(self, id: str) -> bpy.types.NodeTree:
-        asset = bpy.data.node_groups.get(id)
-        if (asset is None):
-            with bpy.data.libraries.load(ShaderBuilder.LibraryPath, link=True, assets_only=True) as (data_from, data_to):
-                data_to.node_groups = [id]
+    def setup_shader(self):
+        node = LibraryLoader.instantiate_shader(self.material.node_tree, self.shader_idname)
 
-            asset = bpy.data.node_groups.get(id)
-            if asset is None:
-                raise ImportError("Failed to instantiate Supercell IO shader")
-            
-        return asset
-        
-    def instantiate_shader(self, id: str, name: str) -> ShaderNodeGroup:
-        tree = self.load_shader_tree(id)
-        shader: ShaderNodeGroup = self.material.node_tree.nodes.new(
-            "ShaderNodeScShader"
-        )
-        
-        props = bpy.context.scene.glTFSupercellImporterProperties
-        preset_id = props.shader_preset
-        
-        shader.label = name
-        shader.location = 40 - tree.default_group_node_width, 100
-        shader.width = tree.default_group_node_width
-        
-        shader.preset_tree = tree
-        shader.preset_id = preset_id
+        node.label = self.shader_label
+        node.location = 40 - node.width, 100
 
-        return shader
+        return node
 
-    def create_shader(self) -> ShaderNodeGroup:
+    def instantiate_utility(self, id: str, name: str) -> ShaderNodeGroup:
+        pass
+
+    def set_shader_props(self) -> ShaderNodeGroup:
         raise NotImplementedError()

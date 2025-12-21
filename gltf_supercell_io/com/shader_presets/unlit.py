@@ -1,9 +1,11 @@
 from ..shader.builder import ShaderBuilder
 
-class UnlitPreset(ShaderBuilder):
-    def create_shader(self):
-        self.shader = self.instantiate_shader("ScUnlitShader", "Unlit Shader")
 
+class UnlitPreset(ShaderBuilder):
+    shader_idname = "ScUnlitShader"
+    shader_label = "Unlit Shader"
+
+    def set_shader_props(self):
         self.setup_diffuse()
         self.setup_opacity()
         self.setup_clipping()

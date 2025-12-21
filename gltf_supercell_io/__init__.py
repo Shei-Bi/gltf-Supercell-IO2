@@ -25,7 +25,8 @@ bl_info = {
 
 from .importer.ui import glTFSupercellImporterProperties
 from .importer.importer_patch import patch_importer
-from .com.shader import ShaderNodeScShader
+from .com.shader.nodes import ShaderNodeScShader, ShaderNodeScNode, node_tree_handler
+from .com.editor import SHADER_OT_SC_create_shader, SHADER_PT_SC_create_shader
 
 # Initialization functions for glTF importer extension
 from .importer.ui import draw_import
@@ -33,7 +34,10 @@ from .importer import glTF2ImportUserExtension
 
 classes = [
     glTFSupercellImporterProperties, # Importer
-    ShaderNodeScShader               # Custom shader
+    ShaderNodeScNode,                # Base class for custom nodes
+    ShaderNodeScShader,              # Custom shader
+    SHADER_PT_SC_create_shader,      # Custom shader graph panel
+    SHADER_OT_SC_create_shader       # Create shader operator
 ]
 
 def register():
@@ -42,6 +46,8 @@ def register():
     
     bpy.types.Scene.glTFSupercellImporterProperties = bpy.props.PointerProperty(type=glTFSupercellImporterProperties)
     patch_importer()
+    
+    bpy.app.handlers.load_post.append(node_tree_handler)
 
 def unregister():
     for cls in classes:

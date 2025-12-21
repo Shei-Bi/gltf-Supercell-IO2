@@ -15,7 +15,7 @@ Essentially, it is a reimagined version of [Flat Converter](https://github.com/D
 
 Requirements
 ------------
-Extension works on Blender 4.5+ *only*
+Extension works on Blender 5.0+ *only*
 
 Installation
 ------------
@@ -23,5 +23,5 @@ WIP
 
 What is currently supported
 ------------
-Currently, basic file import and mesh import are supported  
-TODO: Animations and shaders import
+Currently, basic file import, mesh import and animations are supported  
+TODO: Shaders import

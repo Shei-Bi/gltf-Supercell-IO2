@@ -7,9 +7,7 @@ from ..com.materials import ScShaderMaterial
 from ..com.animation.reader import OdinAnimationReader
 from ..com.animation.packedReader import TranslationChannels, ScaleChannels, RotationChannels
 
-from ..com.shader.builder import ShaderPresetType
-from ..com.shader_presets.unlit import UnlitPreset
-from ..com.shader_presets.brawlStarsLegacy import BrawlStarsLegacy
+from ..com.shader_presets import ShaderPresets
 from ..com.animation import OdinAnimation
 
 from io_scene_gltf2.io.com.gltf2_io_extensions import Extension
@@ -333,15 +331,7 @@ class glTF2ImportUserExtension:
         if (material is None):
             return
 
-        preset = None
-        match(self.properties.shader_preset):
-            case ShaderPresetType.UNLIT:
-                preset = UnlitPreset
-
-            case ShaderPresetType.BRAWL_STARS_LEGACY:
-                preset = BrawlStarsLegacy
-            case _:
-                raise NotImplementedError()
+        preset = ShaderPresets.get_preset_by_id(self.properties.shader_preset)
 
         # Cleanup material from glTF fallback and prepare for our own processing
         gltf_material.pbr_metallic_roughness.blender_nodetree = None
@@ -363,12 +353,13 @@ class glTF2ImportUserExtension:
 
         if (self.properties.adjust_colorspace):
             blender_scene.view_settings.view_transform = "Raw"
-    
+
     def do_animation_channel(self, animation: OdinAnimationReader, duration: int, fps: float, path: str, values: np.array, anim_idx: int, node_idx: int, gltf: glTFImporter):
         vnode = gltf.vnodes[node_idx]
-        
-        action, slot = get_or_create_action_and_slot(gltf, node_idx, anim_idx, path)
-        
+
+        action, slot = get_or_create_action_and_slot(
+            gltf, node_idx, anim_idx, path)
+
         if path == "translation":
             blender_path = "location"
             group_name = "Object Transforms"
@@ -449,10 +440,11 @@ class glTF2ImportUserExtension:
                     values[i] = -values[i]
 
         fps = (fps * bpy.context.scene.render.fps_base)
-        
+
         coords = [0] * (2 * duration)
-        coords[::2] = ((animation.frame_spf * i) * fps for i in range(duration))
-        
+        coords[::2] = ((animation.frame_spf * i) *
+                       fps for i in range(duration))
+
         for i in range(0, num_components):
             coords[1::2] = (vals[i] for vals in values)
             make_fcurve(
@@ -463,13 +455,14 @@ class glTF2ImportUserExtension:
                 index=i,
                 group_name=group_name,
             )
-    
+
     def gather_import_animation_before_hook(self, anim_idx: int, gltf: glTFImporter):
         extensions = gltf.data.animations[anim_idx].extensions or {}
         descriptor = extensions.get(glTF_extension_name)
-        if (descriptor is None): return
+        if (descriptor is None):
+            return
         animation = OdinAnimation.Create(gltf, descriptor)
-        
+
         fps = bpy.context.scene.render.fps
         if (self.properties.fps_source == 'SEQUENCE'):
             bpy.context.scene.render.fps = int(animation.frame_rate)
@@ -484,14 +477,19 @@ class glTF2ImportUserExtension:
             scale = animation.get_scale(i)
 
             if (translation is not None):
-                translation = [list(translation[c][f] for c in range(TranslationChannels)) for f in range(duration)]
-                self.do_animation_channel(animation, duration, fps, "translation", translation, anim_idx, node_idx, gltf)
-                
+                translation = [list(translation[c][f] for c in range(
+                    TranslationChannels)) for f in range(duration)]
+                self.do_animation_channel(
+                    animation, duration, fps, "translation", translation, anim_idx, node_idx, gltf)
+
             if (rotation is not None):
-                rotation = [list(rotation[c][f] for c in range(RotationChannels)) for f in range(duration)]
-                self.do_animation_channel(animation, duration, fps, "rotation", rotation, anim_idx, node_idx, gltf)
-                
+                rotation = [list(rotation[c][f] for c in range(
+                    RotationChannels)) for f in range(duration)]
+                self.do_animation_channel(
+                    animation, duration, fps, "rotation", rotation, anim_idx, node_idx, gltf)
+
             if (scale is not None):
-                scale = [list(scale[c][f] for c in range(ScaleChannels)) for f in range(duration)]
-                self.do_animation_channel(animation, duration, fps, "scale", scale, anim_idx, node_idx, gltf)
-        
+                scale = [list(scale[c][f] for c in range(ScaleChannels))
+                         for f in range(duration)]
+                self.do_animation_channel(
+                    animation, duration, fps, "scale", scale, anim_idx, node_idx, gltf)

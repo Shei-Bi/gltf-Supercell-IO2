@@ -2,6 +2,7 @@ from .constants import OdinAttributeFormat as Format
 from .constants import OdinAttributeType as Type
 import numpy as np
 
+
 class OdinAttribute:
     def __init__(self, buffer: np.array, format: Format, type: Type, offset: int, element_offset: int, stride: int) -> None:
         self.element_offset = element_offset
@@ -12,7 +13,7 @@ class OdinAttribute:
         self.dtype = Format.to_numpy_dtype(self.format)
         self.elements_count = Format.to_element_count(self.format)
         self.data = buffer
-        
+
     def read(self, offset: int) -> np.array:
         match(self.format):
             case Format.NormalizedWeightVector:
@@ -39,10 +40,10 @@ class OdinAttribute:
         if (isinstance(value, int) or isinstance(value, np.integer)):
             offset = self.offset + (self.stride * value) + self.element_offset
             return self.read(offset)
-        
+
         elif (isinstance(value, np.ndarray)):
             return [
                 self.__getitem__(v) for v in value
             ]
-            
+
         return None

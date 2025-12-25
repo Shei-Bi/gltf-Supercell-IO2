@@ -15,7 +15,8 @@ class OdinContinuousPackedReader(OdinPackedReader):
         rotation_accessor_idx = self.descriptor.get("uintAccessor")
         if (rotation_accessor_idx is not None):
             self.rotation_counter = 0
-            self.rotation_data = BinaryData.decode_accessor(gltf, rotation_accessor_idx)
+            self.rotation_data = BinaryData.decode_accessor(
+                gltf, rotation_accessor_idx)
             self.stride = 8
 
         self.elements_counter = 0

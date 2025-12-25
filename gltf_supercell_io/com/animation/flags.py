@@ -6,7 +6,7 @@ class OdinAnimationFlags:
     @property
     def has_transform(self) -> bool:
         return self.flags != 0
-    
+
     @property
     def has_frametime(self) -> bool:
         return self.flags & 1 != 0

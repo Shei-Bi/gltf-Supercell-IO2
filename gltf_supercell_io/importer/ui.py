@@ -68,7 +68,7 @@ def draw_import(context: Context, layout: UILayout):
     body.prop(props, 'fps_source')
     if (props.fps_source == 'CUSTOM'):
         body.prop(props, 'fps_custom')
-    
+
     body.prop(props, 'single_skeleton')
     body.prop(props, 'better_settings')
     body.prop(props, 'adjust_colorspace')

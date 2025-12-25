@@ -9,7 +9,7 @@ from .loader import LibraryLoader
 class ShaderBuilder:
     shader_idname = ""
     shader_label = ""
-    
+
     def __init__(self, sc_material: ScShaderMaterial, material: bpy.types.Material):
         self.sc_material = sc_material
         self.material = material
@@ -127,7 +127,8 @@ class ShaderBuilder:
         socket.default_value = prop.status
 
     def setup_shader(self):
-        node = LibraryLoader.instantiate_shader(self.material.node_tree, self.shader_idname)
+        node = LibraryLoader.instantiate_shader(
+            self.material.node_tree, self.shader_idname)
 
         node.label = self.shader_label
         node.location = 40 - node.width, 100

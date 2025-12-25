@@ -16,6 +16,7 @@ flat = importlib.util.module_from_spec(spec)
 sys.modules["glTF_generated"] = flat
 spec.loader.exec_module(flat)
 
+
 class AccessorType(IntEnum):
     SCALAR = 0
     VEC2 = 1
@@ -31,13 +32,14 @@ class AnimationChannelTargetPath(IntEnum):
     rotation = 1
     scale = 2
     weights = 3
-    
+
 
 class AnimationSamplerInterpolationAlgorithm(IntEnum):
     LINEAR = 0
     STEP = 1
     CATMULLROMSPLINE = 2
     CUBICSPLINE = 3
+
 
 class CameraType(IntEnum):
     perspective = 0
@@ -93,25 +95,25 @@ gltf_schema = {
             "_type": flat.Animation,
             "name": str,
             "channels": [{
-                    "_type": flat.AnimationChannel,
-                    "sampler": int,
-                    "target": {
-                        "_type": flat.AnimationChannelTarget,
-                        "node": int,
-                        "path": AnimationChannelTargetPath,
-                        "extensions": bytes,
-                        "extras": bytes,
-                    },
+                "_type": flat.AnimationChannel,
+                "sampler": int,
+                "target": {
+                    "_type": flat.AnimationChannelTarget,
+                    "node": int,
+                    "path": AnimationChannelTargetPath,
                     "extensions": bytes,
                     "extras": bytes,
+                },
+                "extensions": bytes,
+                "extras": bytes,
             }],
             "samplers": [{
-                    "_type": flat.AnimationSampler,
-                    "input": int,
-                    "interpolation": (AnimationSamplerInterpolationAlgorithm, AnimationSamplerInterpolationAlgorithm.LINEAR),
-                    "output": int,
-                    "extensions": bytes,
-                    "extras": bytes,
+                "_type": flat.AnimationSampler,
+                "input": int,
+                "interpolation": (AnimationSamplerInterpolationAlgorithm, AnimationSamplerInterpolationAlgorithm.LINEAR),
+                "output": int,
+                "extensions": bytes,
+                "extras": bytes,
             }],
 
             "extensions": bytes,
@@ -148,7 +150,7 @@ gltf_schema = {
             "byteStride": (int, 0),
             "target": (int, 34962),
             "extensions": bytes,
-            # "extras": bytes, # struct.error :\
+            # "extras": bytes, # struct.error :
         }
     ],
     "extensionsRequired": [str],
@@ -197,9 +199,9 @@ gltf_schema = {
         {
             "_type": flat.Material,
             "name": str,
-            #"alphaMode": int,
-            #"alphaCutoff": float,
-            #"doubleSided": bool,
+            # "alphaMode": int,
+            # "alphaCutoff": float,
+            # "doubleSided": bool,
             "extensions": bytes,
             "extras": bytes,
         }
@@ -406,7 +408,7 @@ def deserialize_array(buffer: any, key: str, schema: any) -> list:
                 result.append(bytes(object_buffer).decode('utf8'))
             else:
                 result.append(deserialize_flatbuffer(object_buffer, schema))
-            
+
         return result
 
 
@@ -416,7 +418,7 @@ def deserialize_flatbuffer(buffer: any, schema: dict, clean: bool = False) -> di
     for key, value in schema.items():
         if (key.startswith("_")):
             continue
-        
+
         getter_key = pascal_case(key)
         value_type = value
         default_value = None
@@ -454,12 +456,13 @@ def deserialize_flatbuffer(buffer: any, schema: dict, clean: bool = False) -> di
         # String-Enum
         elif issubclass(value_type, IntEnum):
             enum_value = getattr(buffer, getter_key)()
-            if (enum_value == default_value): continue
+            if (enum_value == default_value):
+                continue
             value_data = value_type(enum_value).name
-        
+
         if (clean and value_data is None):
             continue
-        
+
         if (default_value != value_data):
             result[key] = value_data if value_data is not None else default_value
 
@@ -527,23 +530,25 @@ def serialize_array(
     elif schema == float:
         array = np.array(data, dtype=np.float32)
         return builder.CreateNumpyVector(array)
-    
+
     elif isinstance(schema, dict) or schema == str:
         objects = []
 
         for object in data:
-            if (object is None): continue
-            
+            if (object is None):
+                continue
+
             if (schema == str):
                 objects.append(builder.CreateString(object))
             else:
                 objects.append(serialize_flatbuffer(builder, object, schema))
 
         object_count = len(objects)
-        if (object_count == 0): return 0
+        if (object_count == 0):
+            return 0
         vector_start = getattr(flat, f"{class_name}Start{key}Vector")
         vector_start(builder, object_count)
-        
+
         for object in reversed(objects):
             builder.PrependUOffsetTRelative(object)
 
@@ -562,12 +567,12 @@ def serialize_flatbuffer(builder: Builder, data: dict, schema: dict) -> any:
         key_data = data.get(key)
         if key_data == None:
             continue
-        
+
         value_type = value
         default_value = None
         if (isinstance(value, tuple)):
             value_type, default_value = value
-            
+
         if (key_data == default_value):
             continue
 
@@ -581,7 +586,8 @@ def serialize_flatbuffer(builder: Builder, data: dict, schema: dict) -> any:
 
         # FlexBuffers
         elif value_type == bytes:
-            gather[key_getter] = builder.CreateByteVector(flexbuffers.Dumps(key_data))
+            gather[key_getter] = builder.CreateByteVector(
+                flexbuffers.Dumps(key_data))
 
         # Array Of Objects
         elif isinstance(value_type, list):
@@ -591,12 +597,14 @@ def serialize_flatbuffer(builder: Builder, data: dict, schema: dict) -> any:
 
         # Structs
         elif isinstance(value_type, dict):
-            gather[key_getter] = serialize_flatbuffer(builder, key_data, schema[key])
-        
+            gather[key_getter] = serialize_flatbuffer(
+                builder, key_data, schema[key])
+
         # String-Enum
         elif issubclass(value_type, IntEnum):
             enum_data = getattr(value_type, key_data)
-            if (enum_data == default_value): continue
+            if (enum_data == default_value):
+                continue
             gather[key_getter] = enum_data.value
 
     return serialize_gather(builder, class_name, gather)

@@ -48,7 +48,7 @@ class OdinPackedReader(OdinAnimationReader):
         self.data_size = 0
         self.local_node_offset = 0
         self.node_base_data_offset = 0
-        
+
     def get_node_flags(self, node_idx: int):
         return self.flags[node_idx]
 
@@ -74,7 +74,8 @@ class OdinPackedReader(OdinAnimationReader):
 
         # Step 2. Denormalizing values and filling buffers with values in raw view
         translation, rotation, scale = self.denormalize_transforms(
-            total_frame_count, flags, (translation_multiplier, scale_multiplier, ),
+            total_frame_count, flags, (translation_multiplier,
+                                       scale_multiplier, ),
             bTranslation, bRotation, bScale,
             nTranslation, nRotation, nScale
         )
@@ -206,22 +207,23 @@ class OdinPackedReader(OdinAnimationReader):
 
     def read(self):
         self.keyframe_mapping = [node.get("frameCount") for node in self.nodes]
-        
+
         for i in range(len(self.nodes)):
             self.process_node(i)
 
     def get_scale(self, node_idx: int):
         return self.data[node_idx][2]
-    
+
     def get_rotation(self, node_idx: int):
         return self.data[node_idx][1]
 
     def get_translation(self, node_idx: int):
         return self.data[node_idx][0]
-    
+
     def get_frame_data(self, node_index: int, frame_index: int) -> Tuple[list, list, list]:
         translation, rotation, scale = self.data[node_index]
 
         return ([channel[frame_index] for channel in translation] if translation is not None else None,
-                [channel[frame_index] for channel in rotation] if rotation is not None else None,
+                [channel[frame_index]
+                    for channel in rotation] if rotation is not None else None,
                 [channel[frame_index] for channel in scale] if scale is not None else None)

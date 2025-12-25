@@ -24,10 +24,13 @@ class BrawlStarsLegacy(ShaderBuilder):
         3: "diffuse",
         6: "specular",
         8: "colorize",
-        10: "lightmap",
-        11: "lightmapSpecular",
         15: "emission",
         21: "clipPlane"
+    }
+    
+    LIGHTMAP_MAP = {
+        10: "lightmap",
+        11: "lightmapSpecular",
     }
 
     TEXTURE_MAP = {
@@ -35,14 +38,19 @@ class BrawlStarsLegacy(ShaderBuilder):
     }
 
     def set_shader_props(self):
+        lighting_node = self.instantiate_utility("ScLightmapUV", "Lightmaps")
+        lighting_vector = lighting_node.outputs[0]
+
         for idx, key in BrawlStarsLegacy.CONSTANT_MAP.items():
             self.set_constant_prop(key, idx)
 
         for idx, key in BrawlStarsLegacy.COLOR_MAP.items():
             self.set_color_prop(key, idx)
-
-        for idx, key in BrawlStarsLegacy.COLOR_MAP.items():
             self.set_texture_prop(f"{key}Tex2D", idx)
+
+        for idx, key in BrawlStarsLegacy.LIGHTMAP_MAP.items():
+            self.set_color_prop(key, idx)
+            self.set_texture_prop(f"{key}Tex2D", idx, lighting_vector)
 
         for idx, key in BrawlStarsLegacy.TEXTURE_MAP.items():
             self.set_texture_prop(key, idx)

@@ -1,5 +1,5 @@
 import bpy
-from bpy.types import ShaderNodeGroup, ShaderNodeTexImage, ShaderNodeOutputMaterial
+from bpy.types import ShaderNodeGroup, ShaderNodeTexImage, ShaderNodeOutputMaterial, NodeOutputs
 from typing import Tuple
 from ..materials import ScShaderMaterial, ScBlendMode
 from ..materials.variables import ShaderFloatVectorProperty, ShaderFloatProperty, ShaderTextureProperty, ShaderBooleanProperty, ShaderProperty
@@ -15,6 +15,7 @@ class ShaderBuilder:
         self.material = material
         self.shader: ShaderNodeGroup = None
         self.node_counter = 0
+        self.utility_node_offset = -125
         self.image_cache = {}
 
     def create_material(self):
@@ -54,7 +55,7 @@ class ShaderBuilder:
         socket = self.shader.inputs[index]
         socket.default_value = self.sc_material.has_constant(name)
 
-    def set_texture_prop(self, name: str, index: int):
+    def set_texture_prop(self, name: str, index: int, vector: NodeOutputs = None):
         prop: ShaderTextureProperty = self.sc_material.get_property(
             name, ShaderTextureProperty
         )
@@ -88,10 +89,15 @@ class ShaderBuilder:
             node.extension = "REPEAT" if "repeat" in prop.keywords else "CLIP"
             self.node_counter += 1
             self.image_cache[prop.texture_path] = node
+            
+            if (vector is not None):
+                self.material.node_tree.links.new(node.inputs[0], vector)
 
         self.material.node_tree.links.new(
             self.shader.inputs[index], node.outputs[0]
         )
+        
+        return node
 
     def set_color_prop(self, name: str, index: int):
         prop: ShaderFloatVectorProperty = self.sc_material.get_property(
@@ -135,8 +141,20 @@ class ShaderBuilder:
 
         return node
 
-    def instantiate_utility(self, id: str, name: str) -> ShaderNodeGroup:
-        pass
+    def instantiate_utility(self, id: str, label: str) -> ShaderNodeGroup:
+        node = LibraryLoader.instantiate_shader(self.material.node_tree, id)
+
+        node.label = label
+        x, y = self.shader.location
+
+        # Base horizontal offset
+        x -= 1040
+        y = self.utility_node_offset
+        self.utility_node_offset -= node.height + 50
+
+        node.location = x, y
+
+        return node
 
     def set_shader_props(self) -> ShaderNodeGroup:
         raise NotImplementedError()

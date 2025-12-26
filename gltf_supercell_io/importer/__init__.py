@@ -342,7 +342,7 @@ class glTF2ImportUserExtension:
         tree = blender_mat.node_tree
         tree.nodes.clear()
 
-        preset_instance = preset(material, blender_mat)
+        preset_instance = preset(gltf, material, blender_mat)
 
         # Selected preset creation
         preset_instance.create_material()

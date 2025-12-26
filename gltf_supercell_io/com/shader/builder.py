@@ -127,7 +127,7 @@ class ShaderBuilder:
 
         if extension not in IMAGE_EXTENSIONS:
             print(
-                f"Caught unknown image extension while processing SC IO materials: ${prop.texture_path}. Creating empty image...")
+                f"Caught unknown image extension while processing SC IO materials: {prop.texture_path}. Creating empty image...")
             return fallback()
 
         # Firstly, trying to load texture as it is, and if blender supports that extension
@@ -142,7 +142,7 @@ class ShaderBuilder:
         image = self.try_load_texture_image(path)
         if image is None:
             print(
-                f"Failed to load texture while generating SC IO materials: ${prop.texture_path}. Creating empty image...")
+                f"Failed to load texture while generating SC IO materials: {prop.texture_path}. Creating empty image...")
             return fallback()
 
         # Success

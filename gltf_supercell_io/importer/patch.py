@@ -53,7 +53,10 @@ def patch_importer():
     try:
         mod = __import__(TARGET_MODULE, fromlist=[TARGET_CLASS])
         cls = getattr(mod, TARGET_CLASS)
-
+        if getattr(cls, "__sc_patched__", False):
+            return
+        
+        cls.__sc_patched__ = True
         setattr(cls, TARGET_METHOD, load_glb)
     except Exception as e:
-        print(f"[SC IO] Failed to patch: {e}")
+        print(f"[SC IO] Failed to patch importer: {e}")

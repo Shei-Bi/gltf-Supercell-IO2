@@ -54,7 +54,7 @@ class ScShaderMaterial:
                 return None
 
             self._used_variables.add(key)
-            return result # type: ignore
+            return result  # type: ignore
 
         return None
 
@@ -82,12 +82,22 @@ class ScShaderMaterial:
 
         self._variables.from_dict(gltf, data.get("variables", {}))
 
-    def to_dict(self, typed=True):
-        """Save material to dictionary"""
+    def to_typed_dict(self):
         return {
             "blendMode": int(self.blend_mode),
             "constants": self._constants,
             "name": self.name,
             "shader": self.shader_name or "uber",
-            "variables": self._variables.to_typed_dict() if typed else self._variables.to_dict()
+            "variables": self._variables.to_typed_dict()
+        }
+
+    def to_dict(self):
+        """Save material to dictionary"""
+        return {
+            "blendMode": int(self.blend_mode),
+            "constants": self._constants,
+            "name": self.name,
+            "sc_material": True,
+            "shader": self.shader_name or "uber",
+            "variables": self._variables.to_dict()
         }

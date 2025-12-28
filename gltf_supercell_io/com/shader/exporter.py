@@ -6,8 +6,7 @@ from ..shader_presets import ShaderPresets
 from ..utilities import is_typed_array
 from ..materials.variables import ShaderFloatVectorProperty, ShaderFloatProperty, ShaderBooleanProperty, ShaderTextureProperty
 from io_scene_gltf2.blender.exp.material.search_node_tree import has_image_node_from_socket, get_texture_node_from_socket, NodeSocket
-from io_scene_gltf2.blender.exp.material.texture_info import gather_texture_info
-from io_scene_gltf2.blender.exp.material.image import __make_image
+from io_scene_gltf2.blender.exp.material.image import __make_image as make_image
 from io_scene_gltf2.io.com import gltf2_io
 from io_scene_gltf2.blender.exp.cache import cached
 from io_scene_gltf2.io.com.constants import TextureFilter, TextureWrap
@@ -60,7 +59,7 @@ class ShaderExporter(ShaderUtils):
 
     @cached
     @staticmethod
-    def create_legacy_sampler(extension, interpolation):
+    def create_legacy_sampler(extension, interpolation, export_settings: dict):
         wrap_s = None
         wrap_t = None
         mag_filter = None
@@ -91,8 +90,8 @@ class ShaderExporter(ShaderUtils):
         return gltf2_io.Sampler(
             extensions=None,
             extras=None,
-            mag_filter=None,
-            min_filter=None,
+            mag_filter=mag_filter,
+            min_filter=min_filter,
             name=None,
             wrap_s=wrap_s,
             wrap_t=wrap_t,
@@ -101,8 +100,8 @@ class ShaderExporter(ShaderUtils):
     @cached
     @staticmethod
     def create_legacy_texture_info(sampler: gltf2_io.Sampler, uri: str, export_settings: dict):
-        image = __make_image(None, None, None, None, None,
-                             uri, export_settings)
+        image = make_image(None, None, None, None, None,
+                           uri, export_settings)
 
         texture = gltf2_io.Texture(
             extensions=None,
@@ -115,6 +114,8 @@ class ShaderExporter(ShaderUtils):
         return texture
 
     def set_texture_prop(self, name: str, index: int):
+        props = bpy.context.scene.glTFSupercellExporterProperties
+
         """Set the texture based on the socket"""
         socket = self.shader.inputs[index]
         node_socket = NodeSocket(socket, [])
@@ -138,8 +139,18 @@ class ShaderExporter(ShaderUtils):
         if (prefix and not name.startswith(prefix)):
             path = PurePosixPath(prefix) / path
 
+        texture_info = str(path)
+        if (props.legacy_materials):
+            sampler = ShaderExporter.create_legacy_sampler(
+                node.extension, node.interpolation, self.export_settings
+            )
+
+            texture_info = ShaderExporter.create_legacy_texture_info(
+                sampler, texture_info, self.export_settings
+            )
+
         prop = self.sc_material.add_property(
-            name, str(path), ShaderTextureProperty
+            name, texture_info, ShaderTextureProperty
         )
 
         # Kinda sus, but okay
@@ -180,7 +191,10 @@ class ShaderExporter(ShaderUtils):
             prop_type = ShaderFloatProperty
         elif (isinstance(value, Image)):
             prop_type = ShaderTextureProperty
-            value = value.name
+            sampler = ShaderExporter.create_legacy_sampler(
+                "REPEAT", "LINEAR", self.export_settings)
+            value = ShaderExporter.create_legacy_texture_info(
+                sampler, value.name, self.export_settings)
 
         if (prop_type is None):
             print(
@@ -210,9 +224,4 @@ class ShaderExporter(ShaderUtils):
 
             self.set_custom_property(key, self.shader[key])
 
-        # Legacy materials contains sc_material: True for some... reason
-        material = self.sc_material.to_dict(not props.legacy_materials)
-        if (props.legacy_materials):
-            material["sc_material"] = True
-
-        return material
+        return self.sc_material.to_dict() if props.legacy_materials else self.sc_material.to_typed_dict()

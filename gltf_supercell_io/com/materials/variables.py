@@ -1,9 +1,9 @@
 from typing import List, Dict
 from io_scene_gltf2.io.imp.gltf2_io_gltf import glTFImporter
-from io_scene_gltf2.io.com.gltf2_io import Image
+from io_scene_gltf2.io.com.gltf2_io import Image, Texture
 from ..utilities import is_typed_array
 from collections import OrderedDict
-from typing import Any
+from typing import Any, Optional
 
 
 class ShaderProperty:
@@ -47,12 +47,21 @@ class ShaderFloatVectorProperty(ShaderProperty):
 class ShaderTextureProperty(ShaderProperty):
     """Shader texture property"""
 
-    def __init__(self, path: str = ""):
-        if (not isinstance(path, str)):
+    def __init__(self, data: str | Texture):
+        self.texture_path: str = ""
+        self.keywords: List[str] = []
+        self.texture: Optional[Texture] = None
+
+        if (isinstance(data, str)):
+            self.set_path(data)
+        elif (isinstance(data, Texture)):
+            self.texture = data
+        else:
             raise TypeError("Incorrect texture property value type")
 
+    def set_path(self, path: str):
         self.texture_path = path
-        self.keywords: List[str] = []
+        self.keywords = []
 
         if ("#" in path):
             path, keywords = path.split("#")
@@ -61,9 +70,12 @@ class ShaderTextureProperty(ShaderProperty):
 
     @property
     def value(self) -> Any:
+        if (self.texture is not None):
+            return {"index": self.texture}
+
         if (len(self.keywords) == 0):
             return self.texture_path
-        
+
         return f"{self.texture_path}#{'+'.join(self.keywords)}"
 
 
@@ -91,12 +103,13 @@ class ScShaderVariables:
         """Load boolean properties from dictionary"""
         for key, value in data.items():
             self.properties[key] = ShaderBooleanProperty(value)
-            
-    def to_dict(self, filter_type = None):
+
+    def to_dict(self, filter_type=None):
         properties = self.properties
         if filter_type is not None:
-            properties = {key: prop for key, prop in properties.items() if isinstance(prop, filter_type)}
-        
+            properties = {key: prop for key, prop in properties.items(
+            ) if isinstance(prop, filter_type)}
+
         return {key: prop.value for key, prop in properties.items()}
 
     @property

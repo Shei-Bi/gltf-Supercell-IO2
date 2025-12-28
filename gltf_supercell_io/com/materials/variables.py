@@ -21,7 +21,7 @@ class ShaderFloatProperty(ShaderProperty):
     """Shader float property"""
 
     def __init__(self, value: float = 0.0):
-        if (not isinstance(value, float)):
+        if (not isinstance(value, float) and not isinstance(value, int)):
             raise TypeError("Incorrect float property value type")
         self.number = float(value)
 
@@ -34,10 +34,10 @@ class ShaderFloatVectorProperty(ShaderProperty):
     """Shader float vector property"""
 
     def __init__(self, vector: List[float] = []):
-        if (not is_typed_array(vector, float)):
+        if (not is_typed_array(vector, float) and not is_typed_array(vector, int)):
             raise TypeError("Incorrect float array property value type")
 
-        self.vector = list(vector)
+        self.vector = [float(num) for num in vector]
 
     @property
     def value(self) -> Any:
@@ -165,8 +165,12 @@ class ScShaderVariables:
             elif (isinstance(value, float)):
                 self.properties[key] = ShaderFloatProperty(value)
             elif (isinstance(value, dict) and (idx := value.get("index")) is not None):
-                image: Image = gltf.data.images[idx]
-                self.properties[key] = ShaderTextureProperty(image.uri or "")
+                uri = ""
+                if (len(gltf.data.textures) > idx):
+                    texture: Texture = gltf.data.textures[idx]
+                    image: Image = gltf.data.images[texture.source]
+                    uri = image.uri or ""
+                self.properties[key] = ShaderTextureProperty(uri)
             elif (isinstance(value, bool)):
                 self.properties[key] = ShaderBooleanProperty(value)
 

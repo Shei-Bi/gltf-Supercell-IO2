@@ -9,6 +9,9 @@ bl_info = {
     "category": "Generic",
 }
 
+from .exporter.patch import patch_exporter
+from .importer.patch import patch_importer
+
 from .importer import glTF2ImportUserExtension
 from .importer.ui import draw_import
 from .exporter import glTF2ExportUserExtension
@@ -16,10 +19,9 @@ from .exporter.ui import draw_export
 from .com.editor import SHADER_OT_SC_create_shader, SHADER_PT_SC_create_shader
 from .com.shader.nodes import ShaderNodeScShader, ShaderNodeScUtility, ShaderNodeScNode
 from .com.shader.nodes.handler import node_tree_handler
-from .importer.patch import patch_importer
+
 from .importer.ui import glTFSupercellImporterProperties
 from .exporter.ui import glTFSupercellExporterProperties
-from .exporter.patch import patch_exporter
 import bpy
 
 # Initialization functions for glTF importer extension

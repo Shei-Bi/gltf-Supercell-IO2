@@ -29,19 +29,19 @@ class LibraryLoader:
 
     @staticmethod
     def instantiate_node(type_id: str, node_tree: ShaderNodeTree, tree_id: str):
-        shader: ShaderNodeScNode = node_tree.nodes.new(type_id)  # type: ignore
+        shader: ShaderNodeScNode = node_tree.nodes.new(type_id)  # type: ignore # noqa
         shader.tree_id = tree_id
 
         return shader  # type: ignore
 
     @staticmethod
     def instantiate_utility(node_tree: ShaderNodeTree, tree_id: str) -> 'ShaderNodeScUtility':
-        return LibraryLoader.instantiate_node("ShaderNodeScUtility", node_tree, tree_id) # type: ignore
+        return LibraryLoader.instantiate_node("ShaderNodeScUtility", node_tree, tree_id)  # type: ignore # noqa
 
     @staticmethod
     def instantiate_shader(node_tree: ShaderNodeTree, tree_id: str) -> 'ShaderNodeScShader':
         shader: ShaderNodeScShader = LibraryLoader.instantiate_node(
-            "ShaderNodeScShader", node_tree, tree_id) # type: ignore
+            "ShaderNodeScShader", node_tree, tree_id)  # type: ignore # noqa
 
         props = bpy.context.scene.glTFSupercellImporterProperties
         shader.preset_id = props.shader_preset

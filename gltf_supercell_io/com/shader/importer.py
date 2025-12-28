@@ -73,7 +73,7 @@ class ShaderImporter(ShaderUtils):
 
     def set_constant_prop(self, name: str, index: int):
         socket = self.shader.inputs[index]
-        
+
         if (self.is_bool_socket(socket, name)):
             socket.default_value = self.sc_material.has_constant(name)
 
@@ -247,7 +247,8 @@ class ShaderImporter(ShaderUtils):
         return node
 
     def instantiate_utility(self, id: str, label: str):
-        node = LibraryLoader.instantiate_utility(self.material.node_tree, id) # type: ignore
+        node = LibraryLoader.instantiate_utility(
+            self.material.node_tree, id)  # type: ignore
 
         node.label = label
         x, y = self.shader.location

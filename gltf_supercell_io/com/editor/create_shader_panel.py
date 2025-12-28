@@ -10,7 +10,7 @@ class SHADER_OT_SC_create_shader(Operator):
 
     shader_id: bpy.props.StringProperty()
 
-    def execute(self, context): # type: ignore
+    def execute(self, context):  # type: ignore
         preset = ShaderPresets.get_preset_by_id(self.shader_id)
         obj = bpy.context.active_object
         mat = obj.active_material

@@ -5,9 +5,9 @@ import numpy as np
 
 class OdinAnimationReader:
     def __init__(self, animation: dict):
-        self.frame_rate = animation.get("frameRate") or 30
-        self.frame_spf = 1.0 / self.frame_rate
-        self.keyframe_count = (animation.get(
+        self.frame_rate: float = animation.get("frameRate") or 30.0
+        self.frame_spf: float = 1.0 / self.frame_rate
+        self.keyframe_count: int = (animation.get(
             "keyframesCount") or animation.get("keyframeCount")) or 1
         self.nodes_per_keyframe = animation.get("nodesNumberPerKeyframe")
         self.keyframe_mapping: List[int] | None = None

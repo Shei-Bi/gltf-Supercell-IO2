@@ -15,7 +15,7 @@ from .exporter import glTF2ExportUserExtension
 from .exporter.ui import draw_export
 from .com.editor import SHADER_OT_SC_create_shader, SHADER_PT_SC_create_shader
 from .com.shader.nodes import ShaderNodeScShader, ShaderNodeScUtility, ShaderNodeScNode
-#from .com.shader.nodes.handler import node_tree_handler
+from .com.shader.nodes.handler import node_tree_handler
 from .importer.patch import patch_importer
 from .importer.ui import glTFSupercellImporterProperties
 from .exporter.ui import glTFSupercellExporterProperties
@@ -49,7 +49,7 @@ def register():
     patch_importer()
     patch_exporter()
 
-    #bpy.app.handlers.load_post.append(node_tree_handler)
+    bpy.app.handlers.load_post.append(node_tree_handler)
 
     # Use the following 2 lines to register the UI for this hook
     from io_scene_gltf2 import exporter_extension_layout_draw
@@ -66,4 +66,5 @@ def unregister():
 
     from io_scene_gltf2 import exporter_extension_layout_draw
     # Make sure to use the same name in register()
-    del exporter_extension_layout_draw['Supercell']
+    if ('Supercell' in exporter_extension_layout_draw):
+        del exporter_extension_layout_draw['Supercell']

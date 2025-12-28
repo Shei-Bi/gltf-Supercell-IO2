@@ -14,8 +14,8 @@ class OdinPackedReader(OdinAnimationReader):
     def __init__(self, gltf: glTFImporter, animation: dict):
         super().__init__(animation)
 
-        self.descriptor: dict = animation.get("packed") # type: ignore
-        self.nodes: List[dict] = self.descriptor.get("nodes") # type: ignore
+        self.descriptor: dict = animation.get("packed")  # type: ignore
+        self.nodes: List[dict] = self.descriptor.get("nodes")  # type: ignore
         self.stride = 12
 
         # Normalized transform values
@@ -55,8 +55,8 @@ class OdinPackedReader(OdinAnimationReader):
     def process_node(self, node_index: int):
         node = self.nodes[node_index]
         flags = self.flags[node_index]
-        total_frame_count = int(node.get("frameCount"))# type: ignore
-        self.data_size = int(node.get("dataSize")) # type: ignore
+        total_frame_count = int(node.get("frameCount"))  # type: ignore
+        self.data_size = int(node.get("dataSize", 0))  # type: ignore
         self.node_base_data_offset = node_index * self.stride
 
         # Base transform
@@ -77,13 +77,12 @@ class OdinPackedReader(OdinAnimationReader):
             total_frame_count, flags, (translation_multiplier,
                                        scale_multiplier, ),
             bTranslation, bRotation, bScale,
-            nTranslation, nRotation, nScale # type: ignore
+            nTranslation, nRotation, nScale  # type: ignore
         )
 
         self.data.append((translation, rotation, scale))
         self.local_node_offset = 0
         self.node_base_data_offset = 0
-        self.data_size = 0
 
     def denormalize_transforms(self,
                                frame_count: int, flags: OdinAnimationFlags, multiplier: Tuple[int, int],
@@ -206,7 +205,7 @@ class OdinPackedReader(OdinAnimationReader):
         return self.node_base_data[idx]
 
     def read(self):
-        self.keyframe_mapping = [node.get("frameCount") for node in self.nodes] # type: ignore
+        self.keyframe_mapping = [node.get("frameCount") for node in self.nodes]  # type: ignore # noqa
 
         for i in range(len(self.nodes)):
             self.process_node(i)
@@ -226,4 +225,5 @@ class OdinPackedReader(OdinAnimationReader):
         return ([channel[frame_index] for channel in translation] if translation is not None else None,
                 [channel[frame_index]
                     for channel in rotation] if rotation is not None else None,
-                [channel[frame_index] for channel in scale] if scale is not None else None) # type: ignore
+                # type: ignore
+                [channel[frame_index] for channel in scale] if scale is not None else None)

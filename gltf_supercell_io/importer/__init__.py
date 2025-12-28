@@ -19,7 +19,7 @@ from io_scene_gltf2.io.imp.gltf2_io_binary import BinaryData
 from io_scene_gltf2.blender.imp.animation_utils import get_or_create_action_and_slot, make_fcurve
 from io_scene_gltf2.blender.imp.material import BlenderMaterial
 
-from typing import List
+from typing import List, Dict, Any
 import numpy as np
 from pathlib import Path
 from mathutils import Vector
@@ -206,8 +206,8 @@ class glTF2ImportUserExtension:
             self.setup_settings(gltf)
 
         # Shared cache for all meshes import operations
-        gltf.supercell_vertex_cache = {} # type: ignore
-        gltf.supercell_vertex_accessor_offset = 0 # type: ignore
+        gltf.supercell_vertex_cache = {}  # type: ignore
+        gltf.supercell_vertex_accessor_offset = 0  # type: ignore
 
     def gather_import_node_before_hook(self, vnode: VNode, node: Node | None, gltf: glTFImporter):
         """Some nodes (especially in animation files) may have invalid indices, we need to clean them up to avoid errors"""
@@ -224,7 +224,7 @@ class glTF2ImportUserExtension:
                 vnode.type = VNode.DummyRoot
                 vnode.mesh_node_idx = None
 
-    def decode_mesh_attribute(self, gltf: glTFImporter, buffer_idx: int, attribute: dict, offset: int, stride: int) -> tuple[str, np.array]:
+    def decode_mesh_attribute(self, gltf: glTFImporter, buffer_idx: int, attribute: dict, offset: int, stride: int):
         attribute_type = OdinAttributeType(attribute.get("index"))
         attribute_format = OdinAttributeFormat(attribute.get("format"))
         element_offset = attribute.get("offset", 0)
@@ -239,7 +239,8 @@ class glTF2ImportUserExtension:
 
     def decode_mesh_info(self, gltf: glTFImporter, idx: int):
         descriptor = self.get_extension_descriptor(gltf) or {}
-        mesh_infos: list[dict] = descriptor.get("meshDataInfos")
+        mesh_infos: list[dict] = descriptor.get(
+            "meshDataInfos")  # type: ignore
         buffer_idx = descriptor.get("bufferView")
         if (mesh_infos is None or buffer_idx is None):
             raise ImportError("Missing Supercell glTF mesh data")
@@ -248,7 +249,9 @@ class glTF2ImportUserExtension:
         attributes = {}
 
         mesh_info = mesh_infos[idx]
-        vertex_descriptors = mesh_info.get("vertexDescriptors")
+        vertex_descriptors: List[dict] = mesh_info.get(
+            "vertexDescriptors"
+        )  # type: ignore
         for descriptors in vertex_descriptors:
             offset = descriptors.get("offset", 0)
             stride = descriptors.get("stride", 0)
@@ -258,7 +261,7 @@ class glTF2ImportUserExtension:
                     gltf, buffer_idx, attribute, offset, stride)
                 attributes[name] = data
 
-        gltf.supercell_vertex_cache[idx] = attributes
+        gltf.supercell_vertex_cache[idx] = attributes  # type: ignore
 
     def decode_primitive(self, gltf: glTFImporter, primitive: MeshPrimitive):
         extensions = primitive.extensions
@@ -273,7 +276,7 @@ class glTF2ImportUserExtension:
         if (mesh_info_idx is None):
             return
 
-        if (mesh_info_idx not in gltf.supercell_vertex_cache): # type: ignore
+        if (mesh_info_idx not in gltf.supercell_vertex_cache):  # type: ignore
             self.decode_mesh_info(gltf, mesh_info_idx)
 
         # MEGA HACK: instead of writing writing back to buffer and then to accessors and blah blah blah...
@@ -287,35 +290,36 @@ class glTF2ImportUserExtension:
         # Profit 500%
 
         primitive.attributes = {}
-        for name, data in gltf.supercell_vertex_cache[mesh_info_idx].items(): # type: ignore
-            fake_accessor_idx = gltf.supercell_vertex_accessor_offset # type: ignore
+
+        for name, data in gltf.supercell_vertex_cache[mesh_info_idx].items():  # type: ignore # noqa
+            fake_accessor_idx = gltf.supercell_vertex_accessor_offset  # type: ignore
             primitive.attributes[name] = fake_accessor_idx
             gltf.decode_accessor_cache[fake_accessor_idx] = data
             gltf.accessor_cache[fake_accessor_idx] = data
 
-            gltf.supercell_vertex_accessor_offset += 1 # type: ignore
-            
-        # TRICK: gltf importer proceeds vertex color kinda... strangely. 
-        # It creates separate material specifically if there is COLOR_0 attribute. 
+            gltf.supercell_vertex_accessor_offset += 1  # type: ignore
+
+        # TRICK: gltf importer proceeds vertex color kinda... strangely.
+        # It creates separate material specifically if there is COLOR_0 attribute.
         # Should i say that this thing breaks EVERYTHING?
         # So... We need to trick gltf importer and somehow avoid creating
         # this stupid materials and also import this color attributes, so user can decide yourself what to do with that
         # or in the future i will custom processing anyway
-        # So I came up with the idea that we need to get ahead of 
+        # So I came up with the idea that we need to get ahead of
         # gltf importer and import materials manually, filling in all variations as needed
-        
+
         # Checking if primitive has color and material at all
         if ("COLOR_0" in primitive.attributes and primitive.material is not None):
             pymaterial = gltf.data.materials[primitive.material]
             mat = pymaterial.blender_material
-            
+
             # Check if material already created and we just need to apply it to color
             if (None in mat):
                 mat["COLOR_0"] = mat[None]
             else:
                 # Else create material ahead of time and apply
-                mat["COLOR_0"] = mat[None] = BlenderMaterial.create(gltf, primitive.material, None)
-                
+                mat["COLOR_0"] = mat[None] = BlenderMaterial.create(
+                    gltf, primitive.material, None)
 
     def gather_import_mesh_options(self, mesh_options, pymesh: Mesh, skin_idx, gltf: glTFImporter):
         """Please khronos i need this. My glTF importer is kinda homeless"""
@@ -326,7 +330,8 @@ class glTF2ImportUserExtension:
         # we need to decode all mesh infos here to have them ready for primitives decoding
         # not a good place but... there will be no peaceful solution
 
-        gltf.supercell_vertex_accessor_offset = len(gltf.data.accessors or []) # type: ignore
+        gltf.supercell_vertex_accessor_offset = len(  # type: ignore #noqa
+            gltf.data.accessors or [])
         primitives: List[MeshPrimitive] = pymesh.primitives or []
         for primitive in primitives:
             self.decode_primitive(gltf, primitive)
@@ -336,7 +341,8 @@ class glTF2ImportUserExtension:
             return
 
         extensions = gltf_material.extensions = gltf_material.extensions or {}
-        descriptor: dict = extensions.get(glTF_material_extension_name) # type: ignore
+        descriptor: dict = extensions.get(
+            glTF_material_extension_name)  # type: ignore
         if (descriptor is None):
             return
 
@@ -351,7 +357,7 @@ class glTF2ImportUserExtension:
 
         extensions = gltf_material.extensions or {}
         material: ScShaderMaterial = extensions.get(
-            glTF_material_extension_name) # type: ignore
+            glTF_material_extension_name)  # type: ignore
         if (material is None):
             return
 
@@ -375,46 +381,54 @@ class glTF2ImportUserExtension:
         if (self.properties.adjust_colorspace):
             blender_scene.view_settings.view_transform = "Raw"
 
-    def do_animation_channel(self, animation: OdinAnimationReader, duration: int, fps: float, path: str, values: np.array, anim_idx: int, node_idx: int, gltf: glTFImporter):
-        vnode = gltf.vnodes[node_idx] # type: ignore
+    def do_animation_channel(self, animation: OdinAnimationReader, duration: int, fps: float, path: str, values: list, anim_idx: int, node_idx: int, gltf: glTFImporter):
+        vnodes: Dict[Any, VNode] = gltf.vnodes  # type: ignore
+        vnode: VNode = vnodes[node_idx]  # type: ignore
 
         action, slot = get_or_create_action_and_slot(
             gltf, node_idx, anim_idx, path)
 
+        num_components = 0
+        blender_path = ""
+        group_name = ""
         if path == "translation":
             blender_path = "location"
             group_name = "Object Transforms"
             num_components = 3
-            values = [gltf.loc_gltf_to_blender(vals) for vals in values] # type: ignore
+            values = [gltf.loc_gltf_to_blender(  # type: ignore #noqa
+                vals) for vals in values]
             values = vnode.base_locs_to_final_locs(values)
 
         elif path == "rotation":
             blender_path = "rotation_quaternion"
             group_name = "Object Transforms"
             num_components = 4
-            values = [gltf.quaternion_gltf_to_blender(vals) for vals in values] # type: ignore
+            values = [gltf.quaternion_gltf_to_blender(  # type: ignore #noqa
+                vals) for vals in values]
             values = vnode.base_rots_to_final_rots(values)
 
         elif path == "scale":
             blender_path = "scale"
             group_name = "Object Transforms"
             num_components = 3
-            values = [gltf.scale_gltf_to_blender(vals) for vals in values] # type: ignore
+            values = [gltf.scale_gltf_to_blender(  # type: ignore #noqa
+                vals) for vals in values]
             values = vnode.base_scales_to_final_scales(values)
 
         # Objects parented to a bone are translated to the bone tip by default.
         # Correct for this by translating backwards from the tip to the root.
         if vnode.type == VNode.Object and path == "translation":
-            if vnode.parent is not None and gltf.vnodes[vnode.parent].type == VNode.Bone: # type: ignore
-                bone_length = gltf.vnodes[vnode.parent].bone_length # type: ignore
+            if vnode.parent is not None and vnodes[vnode.parent].type == VNode.Bone:
+                bone_length = vnodes[vnode.parent].bone_length  # type: ignore
                 off = Vector((0, -bone_length, 0))
                 values = [vals + off for vals in values]
 
         if vnode.type == VNode.Bone:
             # Need to animate the pose bone when the node is a bone.
-            group_name = vnode.blender_bone_name
+            group_name = vnode.blender_bone_name  # type: ignore
             blender_path = 'pose.bones["%s"].%s' % (
-                bpy.utils.escape_identifier(vnode.blender_bone_name),
+                bpy.utils.escape_identifier(
+                    vnode.blender_bone_name),  # type: ignore
                 blender_path
             )
 
@@ -435,7 +449,7 @@ class glTF2ImportUserExtension:
             #     ps = fs
 
             if path == 'translation':
-                edit_trans, edit_rot = vnode.editbone_trans, vnode.editbone_rot
+                edit_trans, edit_rot = vnode.editbone_trans, vnode.editbone_rot  # type: ignore
                 edit_rot_inv = edit_rot.conjugated()
                 values = [
                     edit_rot_inv @ (trans - edit_trans)
@@ -443,7 +457,7 @@ class glTF2ImportUserExtension:
                 ]
 
             elif path == 'rotation':
-                edit_rot = vnode.editbone_rot
+                edit_rot = vnode.editbone_rot  # type: ignore
                 edit_rot_inv = edit_rot.conjugated()
                 values = [
                     edit_rot_inv @ rot
@@ -463,7 +477,7 @@ class glTF2ImportUserExtension:
         fps = (fps * bpy.context.scene.render.fps_base)
 
         coords = [0] * (2 * duration)
-        coords[::2] = ((animation.frame_spf * i) * # type: ignore
+        coords[::2] = ((animation.frame_spf * i) *  # type: ignore
                        fps for i in range(duration))
 
         for i in range(0, num_components):
@@ -492,7 +506,9 @@ class glTF2ImportUserExtension:
             fps = self.properties.fps_custom
 
         for i, node_idx in enumerate(animation.used_nodes):
-            duration = animation.keyframe_mapping[i]
+            duration = animation.keyframe_count
+            if (animation.keyframe_mapping is not None):
+                duration = animation.keyframe_mapping[i]
             translation = animation.get_translation(i)
             rotation = animation.get_rotation(i)
             scale = animation.get_scale(i)

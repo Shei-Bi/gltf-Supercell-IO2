@@ -34,6 +34,10 @@ class OdinAttribute:
                     self.data, dtype=self.dtype, offset=offset, count=self.elements_count
                 )
 
+        if (self.type == Type.a_normal and np.issubdtype(self.dtype, np.integer)):
+            info = np.iinfo(self.dtype)
+            array = array.astype(np.float32) / info.max
+
         return array
 
     def __getitem__(self, value: int | np.ndarray):

@@ -50,15 +50,15 @@ class OdinContinuousPackedReader(OdinPackedReader):
 
                 # Repeat latest transforms for all transform channels
                 for _ in range(repeat_keyframe_count):
-                    if (flags.has_rotation):
+                    if (rotation is not None):
                         for i in range(RotationChannels):
                             rotation[i][frame_index] = rotation[i][frame_index - 1]
 
-                    if (flags.has_translation):
+                    if (translation is not None):
                         for i in range(TranslationChannels):
                             translation[i][frame_index] = translation[i][frame_index - 1]
 
-                    if (flags.has_scale or flags.has_separate_scale):
+                    if (scale is not None):
                         for i in range(ScaleChannels):
                             scale[i][frame_index] = scale[i][frame_index - 1]
 
@@ -76,18 +76,18 @@ class OdinContinuousPackedReader(OdinPackedReader):
                     # Skip for now. Idk why it exist at all. Maybe for compatibility with gltf animations
                     frametime = self.read_normalized_value()
 
-                if (flags.has_rotation):
+                if (rotation is not None):
                     for i in range(RotationChannels):
                         rotation[i][frame_index] = self.read_normalized_value()
 
-                if (flags.has_translation):
+                if (translation is not None):
                     for i in range(TranslationChannels):
                         translation[i][frame_index] = self.read_normalized_value()
 
-                if (flags.has_scale and flags.has_separate_scale):
+                if (scale is not None and flags.has_scale and flags.has_separate_scale):
                     for i in range(ScaleChannels):
                         scale[i][frame_index] = self.read_normalized_value()
-                elif (flags.has_scale):
+                elif (scale is not None):
                     value = self.read_normalized_value()
                     for i in range(ScaleChannels):
                         scale[i][frame_index] = value

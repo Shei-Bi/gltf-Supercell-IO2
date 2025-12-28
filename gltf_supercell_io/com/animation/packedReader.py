@@ -14,8 +14,8 @@ class OdinPackedReader(OdinAnimationReader):
     def __init__(self, gltf: glTFImporter, animation: dict):
         super().__init__(animation)
 
-        self.descriptor: dict = animation.get("packed")
-        self.nodes: List[dict] = self.descriptor.get("nodes")
+        self.descriptor: dict = animation.get("packed") # type: ignore
+        self.nodes: List[dict] = self.descriptor.get("nodes") # type: ignore
         self.stride = 12
 
         # Normalized transform values
@@ -55,8 +55,8 @@ class OdinPackedReader(OdinAnimationReader):
     def process_node(self, node_index: int):
         node = self.nodes[node_index]
         flags = self.flags[node_index]
-        total_frame_count = node.get("frameCount")
-        self.data_size = node.get("dataSize")
+        total_frame_count = int(node.get("frameCount"))# type: ignore
+        self.data_size = int(node.get("dataSize")) # type: ignore
         self.node_base_data_offset = node_index * self.stride
 
         # Base transform
@@ -77,7 +77,7 @@ class OdinPackedReader(OdinAnimationReader):
             total_frame_count, flags, (translation_multiplier,
                                        scale_multiplier, ),
             bTranslation, bRotation, bScale,
-            nTranslation, nRotation, nScale
+            nTranslation, nRotation, nScale # type: ignore
         )
 
         self.data.append((translation, rotation, scale))
@@ -87,8 +87,8 @@ class OdinPackedReader(OdinAnimationReader):
 
     def denormalize_transforms(self,
                                frame_count: int, flags: OdinAnimationFlags, multiplier: Tuple[int, int],
-                               bTranslation: np.array, bRotation: np.array, bScale: np.array,  # Base transform
-                               nTranslation: np.array, nRotation: np.array, nScale: np.array  # Delta transforms
+                               bTranslation: list, bRotation: list, bScale: list,  # Base transform
+                               nTranslation: list, nRotation: list, nScale: list  # Delta transforms
                                ):
         translation_multiplier, scale_multiplier = multiplier
 
@@ -159,18 +159,18 @@ class OdinPackedReader(OdinAnimationReader):
                 # Skip for now. Idk why it exist at all. Maybe for compatibility with gltf animations
                 frametime = self.read_normalized_value()
 
-            if (flags.has_rotation):
+            if (rotation is not None):
                 for i in range(RotationChannels):
                     rotation[i][frame_index] = self.read_normalized_value()
 
-            if (flags.has_translation):
+            if (translation is not None):
                 for i in range(TranslationChannels):
                     translation[i][frame_index] = self.read_normalized_value()
 
-            if (flags.has_scale and flags.has_separate_scale):
+            if (scale is not None and flags.has_scale and flags.has_separate_scale):
                 for i in range(ScaleChannels):
                     scale[i][frame_index] = self.read_normalized_value()
-            elif (flags.has_scale):
+            elif (scale is not None):
                 value = self.read_normalized_value()
                 for i in range(ScaleChannels):
                     scale[i][frame_index] = value
@@ -206,7 +206,7 @@ class OdinPackedReader(OdinAnimationReader):
         return self.node_base_data[idx]
 
     def read(self):
-        self.keyframe_mapping = [node.get("frameCount") for node in self.nodes]
+        self.keyframe_mapping = [node.get("frameCount") for node in self.nodes] # type: ignore
 
         for i in range(len(self.nodes)):
             self.process_node(i)
@@ -226,4 +226,4 @@ class OdinPackedReader(OdinAnimationReader):
         return ([channel[frame_index] for channel in translation] if translation is not None else None,
                 [channel[frame_index]
                     for channel in rotation] if rotation is not None else None,
-                [channel[frame_index] for channel in scale] if scale is not None else None)
+                [channel[frame_index] for channel in scale] if scale is not None else None) # type: ignore

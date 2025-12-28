@@ -9,7 +9,7 @@ class OdinAnimation:
     """Supercell odin animation reader"""
     @staticmethod
     def CreatePackedReader(gltf: glTFImporter, descriptor: dict) -> OdinPackedReader:
-        packed: dict = descriptor.get("packed")
+        packed: dict = descriptor.get("packed") # type: ignore
         if (packed.get("uintAccessor") is not None):
             return OdinContinuousPackedReader(gltf, descriptor)
 

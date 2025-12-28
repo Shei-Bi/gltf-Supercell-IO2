@@ -1,5 +1,6 @@
 from typing import Tuple, List
 from .flags import OdinAnimationFlags
+import numpy as np
 
 
 class OdinAnimationReader:
@@ -28,6 +29,6 @@ class OdinAnimationReader:
     def get_rotation(self, node_idx: int):
         return None
 
-    def get_frame_data(self, node_index: int, frame_index: int) -> Tuple[list, list, list]:
+    def get_frame_data(self, node_index: int, frame_index: int) -> Tuple[list, list, list] | np.ndarray:
         """Returns frame data for specific node in format (Translation, Rotation, Scale)"""
         raise NotImplementedError()

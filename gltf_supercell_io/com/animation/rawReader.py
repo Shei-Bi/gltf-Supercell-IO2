@@ -8,17 +8,17 @@ class OdinRawAnimationReader(OdinAnimationReader):
     def __init__(self, gltf: glTFImporter, animation: dict):
         super().__init__(animation)
 
-        self.used_nodes = animation.get("nodes")
+        self.used_nodes = animation.get("nodes") # type: ignore
         self.keyframe_mapping = animation.get("keyframeCounts")
 
-        nodes_per_keyframe = animation.get("nodesNumberPerKeyframe")
+        nodes_per_keyframe: list[int] = animation.get("nodesNumberPerKeyframe") # type: ignore
         if (self.keyframe_mapping):
             self.keyframe_mapping = [num for i, num in enumerate(
                 self.keyframe_mapping) for _ in range(nodes_per_keyframe[i])]
 
         self.buffer = BinaryData.decode_accessor(
             gltf, animation.get("accessor"))
-        self.data: np.array = None
+        self.data: np.ndarray = None # type: ignore
 
     def read(self):
         keyframes_total = sum(
@@ -30,10 +30,10 @@ class OdinRawAnimationReader(OdinAnimationReader):
             remapped = np.reshape(
                 self.buffer, (keyframes_total, frame_transform_length))
             self.data = np.split(remapped, np.cumsum(
-                self.keyframe_mapping)[:-1])
+                self.keyframe_mapping)[:-1]) # type: ignore
         else:
             self.data = np.reshape(self.buffer, (len(
                 self.used_nodes), self.keyframe_count, frame_transform_length))
 
-    def get_frame_data(self, node_index: int, frame_index: int):
+    def get_frame_data(self, node_index: int, frame_index: int): # type: ignore
         return np.array_split(self.data[node_index][frame_index], [3, 7])

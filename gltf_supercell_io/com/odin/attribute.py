@@ -4,7 +4,7 @@ import numpy as np
 
 
 class OdinAttribute:
-    def __init__(self, buffer: np.array, format: Format, type: Type, offset: int, element_offset: int, stride: int) -> None:
+    def __init__(self, buffer: np.ndarray, format: Format, type: Type, offset: int, element_offset: int, stride: int) -> None:
         self.element_offset = element_offset
         self.offset = offset
         self.stride = stride
@@ -14,7 +14,7 @@ class OdinAttribute:
         self.elements_count = Format.to_element_count(self.format)
         self.data = buffer
 
-    def read(self, offset: int) -> np.array:
+    def read(self, offset: int) -> np.ndarray:
         match(self.format):
             case Format.NormalizedWeightVector:
                 value = np.frombuffer(
@@ -36,10 +36,10 @@ class OdinAttribute:
 
         return array
 
-    def __getitem__(self, value: any):
+    def __getitem__(self, value: int | np.ndarray):
         if (isinstance(value, int) or isinstance(value, np.integer)):
             offset = self.offset + (self.stride * value) + self.element_offset
-            return self.read(offset)
+            return self.read(int(offset))
 
         elif (isinstance(value, np.ndarray)):
             return np.stack([

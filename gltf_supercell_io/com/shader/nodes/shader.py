@@ -5,7 +5,7 @@ from .node import ShaderNodeScNode
 class ShaderNodeScShader(ShaderNodeScNode):
     bl_idname = "ShaderNodeScShader"
     bl_label = "Supercell IO Shader"
-    bl_icon = 'SHADERFX'
+    bl_icon = "SHADERFX"
 
     preset_id: bpy.props.StringProperty(
         default=""

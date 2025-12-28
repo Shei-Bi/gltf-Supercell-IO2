@@ -10,7 +10,7 @@ class SHADER_OT_SC_create_shader(Operator):
 
     shader_id: bpy.props.StringProperty()
 
-    def execute(self, context):
+    def execute(self, context): # type: ignore
         preset = ShaderPresets.get_preset_by_id(self.shader_id)
         obj = bpy.context.active_object
         mat = obj.active_material
@@ -30,7 +30,8 @@ class SHADER_PT_SC_create_shader(Panel):
     bl_category = "Supercell"
 
     def draw(self, context):
-        self.layout.operator("supercell.create_shader", text="Create unlit shader")\
-            .shader_id = ShaderPresetType.UNLIT
-        self.layout.operator("supercell.create_shader", text="Create Brawl Stars Legacy shader")\
-            .shader_id = ShaderPresetType.BRAWL_STARS_LEGACY
+        if (self.layout is not None):
+            self.layout.operator("supercell.create_shader", text="Create unlit shader")\
+                .shader_id = ShaderPresetType.UNLIT
+            self.layout.operator("supercell.create_shader", text="Create Brawl Stars Legacy shader")\
+                .shader_id = ShaderPresetType.BRAWL_STARS_LEGACY

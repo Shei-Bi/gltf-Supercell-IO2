@@ -1,7 +1,11 @@
 import bpy
 import os
 
-from bpy.types import ShaderNodeGroup, ShaderNodeTree
+from bpy.types import ShaderNodeTree
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .nodes import ShaderNodeScNode, ShaderNodeScUtility, ShaderNodeScShader
 
 
 class LibraryLoader:
@@ -24,15 +28,22 @@ class LibraryLoader:
         return asset
 
     @staticmethod
-    def instantiate_shader(node_tree: ShaderNodeTree, tree_id: str) -> ShaderNodeGroup:
-        shader: ShaderNodeGroup = node_tree.nodes.new(
-            "ShaderNodeScShader"
-        )
+    def instantiate_node(type_id: str, node_tree: ShaderNodeTree, tree_id: str):
+        shader: ShaderNodeScNode = node_tree.nodes.new(type_id)  # type: ignore
+        shader.tree_id = tree_id
+
+        return shader  # type: ignore
+
+    @staticmethod
+    def instantiate_utility(node_tree: ShaderNodeTree, tree_id: str) -> 'ShaderNodeScUtility':
+        return LibraryLoader.instantiate_node("ShaderNodeScUtility", node_tree, tree_id) # type: ignore
+
+    @staticmethod
+    def instantiate_shader(node_tree: ShaderNodeTree, tree_id: str) -> 'ShaderNodeScShader':
+        shader: ShaderNodeScShader = LibraryLoader.instantiate_node(
+            "ShaderNodeScShader", node_tree, tree_id) # type: ignore
 
         props = bpy.context.scene.glTFSupercellImporterProperties
-        preset_id = props.shader_preset
-
-        shader.tree_id = tree_id
-        shader.preset_id = preset_id
+        shader.preset_id = props.shader_preset
 
         return shader

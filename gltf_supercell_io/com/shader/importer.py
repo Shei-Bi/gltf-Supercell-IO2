@@ -1,13 +1,20 @@
+from __future__ import annotations
+
 import bpy
 from pathlib import Path
 from os.path import join, exists
-from bpy.types import ShaderNodeGroup, ShaderNodeTexImage, ShaderNodeOutputMaterial, NodeOutputs, Image
+from bpy.types import ShaderNodeGroup, ShaderNodeTexImage, ShaderNodeOutputMaterial, Image, Material, ShaderNodeTree
 from io_scene_gltf2.io.imp.gltf2_io_gltf import glTFImporter
 from io_scene_gltf2.io.com.gltf2_io import Image as glImage
 from typing import Tuple
 from ..materials import ScShaderMaterial, ScBlendMode
 from ..materials.variables import ShaderFloatVectorProperty, ShaderFloatProperty, ShaderTextureProperty, ShaderBooleanProperty, ShaderProperty
+from . import ShaderUtils
 from .loader import LibraryLoader
+
+from typing import TYPE_CHECKING, Type
+if TYPE_CHECKING:
+    from ..shader_presets import ShaderPresetDescriptor
 
 NATIVE_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tif",
                            ".tiff", ".tga", ".bmp", ".exr",
@@ -18,31 +25,29 @@ COMPRESSED_IMAGE_EXTENSIONS = [".ktx", ".sctx", ".pvr"]
 IMAGE_EXTENSIONS = NATIVE_IMAGE_EXTENSIONS + COMPRESSED_IMAGE_EXTENSIONS
 
 
-class ShaderBuilder:
-    shader_idname = ""
-    shader_label = ""
-
-    def __init__(self, gltf: glTFImporter, sc_material: ScShaderMaterial, material: bpy.types.Material):
+class ShaderImporter(ShaderUtils):
+    def __init__(self, gltf: glTFImporter, sc_material: ScShaderMaterial, material: Material, preset: Type[ShaderPresetDescriptor]):
         self.gltf = gltf
         self.sc_material = sc_material
         self.material = material
-        self.shader: ShaderNodeGroup = None
+        self.preset = preset
+
         self.node_counter = 0
         self.util_node_pos_offset = -125
         self.image_cache = {}
         self.basepath = Path(gltf.import_settings["filepath"]).parent
 
-    def create_material(self):
-        tree = self.material.node_tree
+    def import_material(self):
+        tree: ShaderNodeTree = self.material.node_tree  # type: ignore
         self.setup_blending()
 
-        output: ShaderNodeOutputMaterial = tree.nodes.new(
+        output: ShaderNodeOutputMaterial = tree.nodes.new(  # type: ignore
             'ShaderNodeOutputMaterial'
         )
         output.location = 200, 100
 
         self.shader = self.setup_shader()
-        self.set_shader_props()
+        self.preset.import_shader(self)
         tree.links.new(output.inputs[0], self.shader.outputs[0])
 
         if (len(self.sc_material.unused_constants)):
@@ -59,22 +64,24 @@ class ShaderBuilder:
 
     def set_raw_shader_prop(self, raw_property: Tuple[str, ShaderProperty]):
         key, prop = raw_property
-        if (isinstance(raw_property, ShaderNodeTexImage)):
-            # TODO: Add image conversion ?
-            self.shader[key] = prop.texture_path
-        else:
-            self.shader[key] = prop.value
+        if (isinstance(prop, ShaderTextureProperty)):
+            image = self.load_texture_image(prop, True)
+            self.shader[key] = image
+            return
+
+        self.shader[key] = prop.value
 
     def set_constant_prop(self, name: str, index: int):
         socket = self.shader.inputs[index]
-        socket.default_value = self.sc_material.has_constant(name)
+        
+        if (self.is_bool_socket(socket, name)):
+            socket.default_value = self.sc_material.has_constant(name)
 
     def load_compressed_texture_image(self, path: str) -> Image | None:
         return None
 
     def try_load_texture_image(self, path: Path) -> Image | None:
         for extension in IMAGE_EXTENSIONS:
-            # Trying to load with usual path
             paths = [
                 # Tweak for brawl stars, trying to use highres textures preferably
                 join(self.basepath, "highres", path.with_suffix(
@@ -98,7 +105,7 @@ class ShaderBuilder:
 
                     return bpy.data.images.load(maybe_path)
 
-    def load_texture_image(self, node: ShaderNodeTexImage, prop: ShaderTextureProperty):
+    def load_texture_image(self, prop: ShaderTextureProperty, use_keywords: bool = False) -> Image:
         # Using gltf images as our cache
         # Should be more reliable for some edge cases
         self.gltf.data.images = self.gltf.data.images or []
@@ -107,23 +114,24 @@ class ShaderBuilder:
         if (len(gltf_images) > 0):
             name = gltf_images[0].blender_image_name
             image = bpy.data.images[name]
-            node.image = image
-            return
+            return image
 
         path = Path(prop.texture_path)
-        name = path.name
+        # Special handle for textures in custom properties
+        # Since they dont have nodes in shader graph, it would be good if we preserve they at least in image name
+        name = Path(prop.value).name if use_keywords else path.name
         extension = path.suffix
 
         def cache_image(image: Image):
             gltf_image = glImage(None, None, None, None,
                                  prop.texture_path, prop.texture_path)
-            gltf_image.blender_image_name = image.name
+            gltf_image.blender_image_name = image.name  # type: ignore
             self.gltf.data.images.append(gltf_image)
 
         def fallback():
             image = bpy.data.images.new(name, 1, 1)
-            node.image = image
             cache_image(image)
+            return image
 
         if extension not in IMAGE_EXTENSIONS:
             print(
@@ -134,9 +142,8 @@ class ShaderBuilder:
         absolute_path = join(self.basepath, prop.texture_path)
         if (exists(absolute_path) and extension in NATIVE_IMAGE_EXTENSIONS):
             image = bpy.data.images.load(absolute_path)
-            node.image = image
             cache_image(image)
-            return
+            return image
 
         # Finally, trying to load image with different extension and basepaths
         image = self.try_load_texture_image(path)
@@ -147,12 +154,12 @@ class ShaderBuilder:
 
         # Success
         image.name = prop.texture_path
-        image.colorspace_settings.name = "scene_linear"
-        node.image = image
+        image.colorspace_settings.name = "scene_linear"  # type: ignore
         cache_image(image)
+        return image
 
-    def set_texture_prop(self, name: str, index: int, vector: NodeOutputs = None):
-        prop: ShaderTextureProperty = self.sc_material.get_property(
+    def set_texture_prop(self, name: str, index: int):
+        prop = self.sc_material.get_property(
             name, ShaderTextureProperty
         )
 
@@ -163,12 +170,13 @@ class ShaderBuilder:
             )
             return
 
-        node: ShaderNodeTexImage = self.image_cache.get(prop.texture_path)
+        node: ShaderNodeTexImage = self.image_cache.get(
+            prop.texture_path)  # type: ignore
         if (node is None):
             node: ShaderNodeTexImage = self.material.node_tree.nodes.new(
                 "ShaderNodeTexImage"
             )
-            self.load_texture_image(node, prop)
+            node.image = self.load_texture_image(prop)
 
             x, y = self.shader.location
 
@@ -187,17 +195,14 @@ class ShaderBuilder:
             self.node_counter += 1
             self.image_cache[prop.texture_path] = node
 
-            if (vector is not None):
-                self.material.node_tree.links.new(node.inputs[0], vector)
-
-        self.material.node_tree.links.new(
+        self.material.node_tree.links.new(  # type: ignore
             self.shader.inputs[index], node.outputs[0]
         )
 
         return node
 
     def set_color_prop(self, name: str, index: int):
-        prop: ShaderFloatVectorProperty = self.sc_material.get_property(
+        prop = self.sc_material.get_property(
             name, ShaderFloatVectorProperty
         )
 
@@ -205,10 +210,11 @@ class ShaderBuilder:
             return
 
         socket = self.shader.inputs[index]
-        socket.default_value = prop.vector
+        if (self.is_color_socket(socket, name)):
+            socket.default_value = prop.vector
 
     def set_float_prop(self, name: str, index: int):
-        prop: ShaderFloatProperty = self.sc_material.get_property(
+        prop = self.sc_material.get_property(
             name, ShaderFloatProperty
         )
 
@@ -216,10 +222,11 @@ class ShaderBuilder:
             return
 
         socket = self.shader.inputs[index]
-        socket.default_value = prop.number
+        if (self.is_float_socket(socket, name)):
+            socket.default_value = prop.number
 
     def set_bool_prop(self, name: str, index: int):
-        prop: ShaderBooleanProperty = self.sc_material.get_property(
+        prop = self.sc_material.get_property(
             name, ShaderBooleanProperty
         )
 
@@ -227,19 +234,20 @@ class ShaderBuilder:
             return
 
         socket = self.shader.inputs[index]
-        socket.default_value = prop.status
+        if (self.is_bool_socket(socket, name)):
+            socket.default_value = prop.status
 
     def setup_shader(self):
         node = LibraryLoader.instantiate_shader(
-            self.material.node_tree, self.shader_idname)
+            self.material.node_tree, self.preset.shader_idname)  # type: ignore
 
-        node.label = self.shader_label
+        node.label = self.preset.shader_label
         node.location = 40 - node.width, 100
 
         return node
 
-    def instantiate_utility(self, id: str, label: str) -> ShaderNodeGroup:
-        node = LibraryLoader.instantiate_shader(self.material.node_tree, id)
+    def instantiate_utility(self, id: str, label: str):
+        node = LibraryLoader.instantiate_utility(self.material.node_tree, id) # type: ignore
 
         node.label = label
         x, y = self.shader.location
@@ -252,6 +260,3 @@ class ShaderBuilder:
         node.location = x, y
 
         return node
-
-    def set_shader_props(self) -> ShaderNodeGroup:
-        raise NotImplementedError()

@@ -8,6 +8,7 @@ from ..com.animation.reader import OdinAnimationReader
 from ..com.animation.packedReader import TranslationChannels, ScaleChannels, RotationChannels
 
 from ..com.shader_presets import ShaderPresets
+from ..com.shader.importer import ShaderImporter
 from ..com.animation import OdinAnimation
 
 from io_scene_gltf2.io.com.gltf2_io_extensions import Extension
@@ -16,6 +17,7 @@ from io_scene_gltf2.io.com.gltf2_io import Accessor, Material, Node, Mesh, MeshP
 from io_scene_gltf2.blender.imp.vnode import VNode
 from io_scene_gltf2.io.imp.gltf2_io_binary import BinaryData
 from io_scene_gltf2.blender.imp.animation_utils import get_or_create_action_and_slot, make_fcurve
+from io_scene_gltf2.blender.imp.material import BlenderMaterial
 
 from typing import List
 import numpy as np
@@ -204,8 +206,8 @@ class glTF2ImportUserExtension:
             self.setup_settings(gltf)
 
         # Shared cache for all meshes import operations
-        gltf.supercell_vertex_cache = {}
-        gltf.supercell_vertex_accessor_offset = 0
+        gltf.supercell_vertex_cache = {} # type: ignore
+        gltf.supercell_vertex_accessor_offset = 0 # type: ignore
 
     def gather_import_node_before_hook(self, vnode: VNode, node: Node | None, gltf: glTFImporter):
         """Some nodes (especially in animation files) may have invalid indices, we need to clean them up to avoid errors"""
@@ -271,7 +273,7 @@ class glTF2ImportUserExtension:
         if (mesh_info_idx is None):
             return
 
-        if (mesh_info_idx not in gltf.supercell_vertex_cache):
+        if (mesh_info_idx not in gltf.supercell_vertex_cache): # type: ignore
             self.decode_mesh_info(gltf, mesh_info_idx)
 
         # MEGA HACK: instead of writing writing back to buffer and then to accessors and blah blah blah...
@@ -285,13 +287,35 @@ class glTF2ImportUserExtension:
         # Profit 500%
 
         primitive.attributes = {}
-        for name, data in gltf.supercell_vertex_cache[mesh_info_idx].items():
-            fake_accessor_idx = gltf.supercell_vertex_accessor_offset
+        for name, data in gltf.supercell_vertex_cache[mesh_info_idx].items(): # type: ignore
+            fake_accessor_idx = gltf.supercell_vertex_accessor_offset # type: ignore
             primitive.attributes[name] = fake_accessor_idx
             gltf.decode_accessor_cache[fake_accessor_idx] = data
             gltf.accessor_cache[fake_accessor_idx] = data
 
-            gltf.supercell_vertex_accessor_offset += 1
+            gltf.supercell_vertex_accessor_offset += 1 # type: ignore
+            
+        # TRICK: gltf importer proceeds vertex color kinda... strangely. 
+        # It creates separate material specifically if there is COLOR_0 attribute. 
+        # Should i say that this thing breaks EVERYTHING?
+        # So... We need to trick gltf importer and somehow avoid creating
+        # this stupid materials and also import this color attributes, so user can decide yourself what to do with that
+        # or in the future i will custom processing anyway
+        # So I came up with the idea that we need to get ahead of 
+        # gltf importer and import materials manually, filling in all variations as needed
+        
+        # Checking if primitive has color and material at all
+        if ("COLOR_0" in primitive.attributes and primitive.material is not None):
+            pymaterial = gltf.data.materials[primitive.material]
+            mat = pymaterial.blender_material
+            
+            # Check if material already created and we just need to apply it to color
+            if (None in mat):
+                mat["COLOR_0"] = mat[None]
+            else:
+                # Else create material ahead of time and apply
+                mat["COLOR_0"] = mat[None] = BlenderMaterial.create(gltf, primitive.material, None)
+                
 
     def gather_import_mesh_options(self, mesh_options, pymesh: Mesh, skin_idx, gltf: glTFImporter):
         """Please khronos i need this. My glTF importer is kinda homeless"""
@@ -302,17 +326,17 @@ class glTF2ImportUserExtension:
         # we need to decode all mesh infos here to have them ready for primitives decoding
         # not a good place but... there will be no peaceful solution
 
-        gltf.supercell_vertex_accessor_offset = len(gltf.data.accessors or [])
+        gltf.supercell_vertex_accessor_offset = len(gltf.data.accessors or []) # type: ignore
         primitives: List[MeshPrimitive] = pymesh.primitives or []
         for primitive in primitives:
             self.decode_primitive(gltf, primitive)
 
-    def gather_import_material_before_hook(self, gltf_material: Material, vertex_color, gltf: glTFImporter):
+    def gather_import_material_before_hook(self, gltf_material: Material, vertex_color: str, gltf: glTFImporter):
         if (not self.valid_gltf(gltf)):
             return
 
         extensions = gltf_material.extensions = gltf_material.extensions or {}
-        descriptor: dict = extensions.get(glTF_material_extension_name)
+        descriptor: dict = extensions.get(glTF_material_extension_name) # type: ignore
         if (descriptor is None):
             return
 
@@ -327,11 +351,9 @@ class glTF2ImportUserExtension:
 
         extensions = gltf_material.extensions or {}
         material: ScShaderMaterial = extensions.get(
-            glTF_material_extension_name)
+            glTF_material_extension_name) # type: ignore
         if (material is None):
             return
-
-        preset = ShaderPresets.get_preset_by_id(self.properties.shader_preset)
 
         # Cleanup material from glTF fallback and prepare for our own processing
         gltf_material.pbr_metallic_roughness.blender_nodetree = None
@@ -342,10 +364,9 @@ class glTF2ImportUserExtension:
         tree = blender_mat.node_tree
         tree.nodes.clear()
 
-        preset_instance = preset(gltf, material, blender_mat)
-
-        # Selected preset creation
-        preset_instance.create_material()
+        preset = ShaderPresets.get_preset_by_id(self.properties.shader_preset)
+        importer = ShaderImporter(gltf, material, blender_mat, preset)
+        importer.import_material()
 
     def gather_import_scene_after_nodes_hook(self, gltf_scene, blender_scene: bpy.types.Scene, gltf):
         if (not self.valid_gltf(gltf)):
@@ -355,7 +376,7 @@ class glTF2ImportUserExtension:
             blender_scene.view_settings.view_transform = "Raw"
 
     def do_animation_channel(self, animation: OdinAnimationReader, duration: int, fps: float, path: str, values: np.array, anim_idx: int, node_idx: int, gltf: glTFImporter):
-        vnode = gltf.vnodes[node_idx]
+        vnode = gltf.vnodes[node_idx] # type: ignore
 
         action, slot = get_or_create_action_and_slot(
             gltf, node_idx, anim_idx, path)
@@ -364,28 +385,28 @@ class glTF2ImportUserExtension:
             blender_path = "location"
             group_name = "Object Transforms"
             num_components = 3
-            values = [gltf.loc_gltf_to_blender(vals) for vals in values]
+            values = [gltf.loc_gltf_to_blender(vals) for vals in values] # type: ignore
             values = vnode.base_locs_to_final_locs(values)
 
         elif path == "rotation":
             blender_path = "rotation_quaternion"
             group_name = "Object Transforms"
             num_components = 4
-            values = [gltf.quaternion_gltf_to_blender(vals) for vals in values]
+            values = [gltf.quaternion_gltf_to_blender(vals) for vals in values] # type: ignore
             values = vnode.base_rots_to_final_rots(values)
 
         elif path == "scale":
             blender_path = "scale"
             group_name = "Object Transforms"
             num_components = 3
-            values = [gltf.scale_gltf_to_blender(vals) for vals in values]
+            values = [gltf.scale_gltf_to_blender(vals) for vals in values] # type: ignore
             values = vnode.base_scales_to_final_scales(values)
 
         # Objects parented to a bone are translated to the bone tip by default.
         # Correct for this by translating backwards from the tip to the root.
         if vnode.type == VNode.Object and path == "translation":
-            if vnode.parent is not None and gltf.vnodes[vnode.parent].type == VNode.Bone:
-                bone_length = gltf.vnodes[vnode.parent].bone_length
+            if vnode.parent is not None and gltf.vnodes[vnode.parent].type == VNode.Bone: # type: ignore
+                bone_length = gltf.vnodes[vnode.parent].bone_length # type: ignore
                 off = Vector((0, -bone_length, 0))
                 values = [vals + off for vals in values]
 
@@ -442,7 +463,7 @@ class glTF2ImportUserExtension:
         fps = (fps * bpy.context.scene.render.fps_base)
 
         coords = [0] * (2 * duration)
-        coords[::2] = ((animation.frame_spf * i) *
+        coords[::2] = ((animation.frame_spf * i) * # type: ignore
                        fps for i in range(duration))
 
         for i in range(0, num_components):

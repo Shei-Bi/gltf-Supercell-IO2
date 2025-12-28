@@ -1,15 +1,3 @@
-from .importer import glTF2ImportUserExtension
-from .importer.ui import draw_import
-from .exporter import glTF2ExportUserExtension
-from .exporter.ui import draw_export
-from .com.editor import SHADER_OT_SC_create_shader, SHADER_PT_SC_create_shader
-from .com.shader.nodes import ShaderNodeScShader, ShaderNodeScNode, node_tree_handler
-from .importer.patch import patch_importer
-from .importer.ui import glTFSupercellImporterProperties
-from .exporter.ui import glTFSupercellExporterProperties
-from .exporter.patch import patch_exporter
-import bpy
-
 bl_info = {
     "name": "glTF Supercell IO",
     "author": "DaniilSV",
@@ -21,6 +9,18 @@ bl_info = {
     "category": "Generic",
 }
 
+from .importer import glTF2ImportUserExtension
+from .importer.ui import draw_import
+from .exporter import glTF2ExportUserExtension
+from .exporter.ui import draw_export
+from .com.editor import SHADER_OT_SC_create_shader, SHADER_PT_SC_create_shader
+from .com.shader.nodes import ShaderNodeScShader, ShaderNodeScUtility, ShaderNodeScNode
+#from .com.shader.nodes.handler import node_tree_handler
+from .importer.patch import patch_importer
+from .importer.ui import glTFSupercellImporterProperties
+from .exporter.ui import glTFSupercellExporterProperties
+from .exporter.patch import patch_exporter
+import bpy
 
 # Initialization functions for glTF importer extension
 
@@ -28,9 +28,10 @@ classes = [
     glTFSupercellImporterProperties,  # Importer properties
     glTFSupercellExporterProperties,  # Exporter properties
     ShaderNodeScNode,                 # Base class for custom nodes
-    ShaderNodeScShader,               # Custom shader
+    ShaderNodeScUtility,              # Custom utility nodes holder
+    ShaderNodeScShader,               # Custom shader node holder
     SHADER_PT_SC_create_shader,       # Custom shader graph panel
-    SHADER_OT_SC_create_shader        # Create shader operator
+    SHADER_OT_SC_create_shader,       # Create shader operator
 ]
 
 
@@ -48,7 +49,7 @@ def register():
     patch_importer()
     patch_exporter()
 
-    bpy.app.handlers.load_post.append(node_tree_handler)
+    #bpy.app.handlers.load_post.append(node_tree_handler)
 
     # Use the following 2 lines to register the UI for this hook
     from io_scene_gltf2 import exporter_extension_layout_draw

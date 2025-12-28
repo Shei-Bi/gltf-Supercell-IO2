@@ -1,13 +1,15 @@
 import bpy
+from bpy.types import ShaderNodeCustomGroup
+from bpy.props import StringProperty
 from ..loader import LibraryLoader
 
 
-class ShaderNodeScNode(bpy.types.ShaderNodeCustomGroup):
+class ShaderNodeScNode(ShaderNodeCustomGroup):
     bl_idname = "ShaderNodeScNode"
     bl_label = "Supercell IO Node"
     bl_icon = "NODE"
 
-    tree_id: bpy.props.StringProperty(
+    tree_id: StringProperty(
         default="",
         update=lambda self, ctx: self.init_tree(ctx)
     )

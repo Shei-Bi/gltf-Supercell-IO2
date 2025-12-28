@@ -42,8 +42,8 @@ class OdinAttribute:
             return self.read(offset)
 
         elif (isinstance(value, np.ndarray)):
-            return [
+            return np.stack([
                 self.__getitem__(v) for v in value
-            ]
+            ])
 
         return None

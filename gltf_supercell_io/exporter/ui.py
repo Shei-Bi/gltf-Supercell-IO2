@@ -1,20 +1,27 @@
 import bpy
 from bpy.types import PropertyGroup
+from bpy.props import StringProperty, BoolProperty
 from ..com import glTF_extension_name
 
 
 class glTFSupercellExporterProperties(PropertyGroup):
-    enabled: bpy.props.BoolProperty(
+    enabled: BoolProperty(
         name="Supercell",
         description='Include this extension in the exported glTF file.',
         default=True
     )
     
-    #optimize_json: bpy.props.BoolProperty(
-    #    name="Optimize JSON",
-    #    description='Encode json data using FlatBuffers.',
-    #    default=True
-    #)
+    path_prefix: StringProperty(
+        name="Texture prefix",
+        description="Exports textures with this prefix if needed",
+        default="sc3d/"
+    )
+    
+    legacy_materials: BoolProperty(
+        name="Legacy materials",
+        description="Exports materials in legacy format",
+        default=False
+    )
 
 
 def draw_export(context, layout):
@@ -25,5 +32,5 @@ def draw_export(context, layout):
 
     header.prop(props, "enabled")
     if body != None:
-        #body.prop(props, "optimize_json")
-        pass
+        body.prop(props, "path_prefix")
+        body.prop(props, "legacy_materials")

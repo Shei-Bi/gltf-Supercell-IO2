@@ -1,5 +1,5 @@
 import bpy
-from bpy.types import UILayout, Context, PropertyGroup
+from bpy.types import UILayout, Context, PropertyGroup, AddonPreferences
 from bpy.props import BoolProperty, EnumProperty, FloatProperty
 from ..com.shader_presets import ShaderPresetType
 from ..com import glTF_extension_name

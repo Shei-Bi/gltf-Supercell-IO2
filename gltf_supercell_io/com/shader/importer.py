@@ -214,16 +214,26 @@ class ShaderImporter(ShaderUtils):
             socket.default_value = prop.vector
 
     def set_float_prop(self, name: str, index: int):
-        prop = self.sc_material.get_property(
+        socket = self.shader.inputs[index]
+        if (not self.is_float_socket(socket, name)):
+            return
+        
+        float_prop = self.sc_material.get_property(
             name, ShaderFloatProperty
         )
 
-        if (prop is None):
+        if (float_prop):
+            socket.default_value = float_prop.number
             return
-
-        socket = self.shader.inputs[index]
-        if (self.is_float_socket(socket, name)):
-            socket.default_value = prop.number
+                
+        # Sometimes floats are saved as color, as if after conversion or something
+        # Bruh, based supercell devs
+        # so trying to get it as color
+        vector_prop = self.sc_material.get_property(
+            name, ShaderFloatVectorProperty
+        )
+        if (vector_prop and len(vector_prop.value)):
+            socket.default_value = vector_prop.value[0]
 
     def set_bool_prop(self, name: str, index: int):
         prop = self.sc_material.get_property(

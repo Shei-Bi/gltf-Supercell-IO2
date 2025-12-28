@@ -6,9 +6,25 @@ from ..com import glTF_extension_name
 
 fps_source_items = (
     ('SEQUENCE', 'Sequence',
-     'The sequence frame rate matches the original frame rate', 'ACTION', 0),
-    ('SCENE', 'Scene', 'The sequence is resampled to the frame rate of the scene', 'SCENE_DATA', 1),
+     'The sequence frame rate matches the original frame rate', 
+     'ACTION', 0
+    ),
+    ('SCENE', 'Scene', 
+     'The sequence is resampled to the frame rate of the scene', 
+     'SCENE_DATA', 1
+    ),
     ('CUSTOM', 'Custom', 'The sequence is resampled to a custom frame rate', 2),
+)
+
+materials_source_items = (
+    ('IMPORT', 'Import', 
+     'Creates new materials as usual, so even if the materials exist, new instances will be created specifically for the imported resources', 
+     'FILE_NEW', 0
+    ),
+    ('EXISTINGS', 'Existing', 
+     'Attempts to use existing materials in the scene. Useful for assets that are split across multiple files but share the same material.', 
+     'BLENDER', 1
+    )
 )
 
 
@@ -53,6 +69,8 @@ class glTFSupercellImporterProperties(PropertyGroup):
         soft_max=60.0,
         step=100,
     )
+    
+    material_source: EnumProperty(name='Material Source', items=materials_source_items)
 
 
 def draw_import(context: Context, layout: UILayout):

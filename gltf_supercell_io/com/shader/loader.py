@@ -11,14 +11,16 @@ if TYPE_CHECKING:
 class LibraryLoader:
     LibraryName = "SupercellIO"
     BaseDirectory = os.path.dirname(os.path.abspath(__file__))
+    LibraryName = "supercell_io_shaders.blend"
     LibraryPath = os.path.join(
-        BaseDirectory, "library", "supercell_io_shaders.blend")
+        BaseDirectory, "library", LibraryName
+    )
 
     @staticmethod
     def load_shader_tree(id: str) -> bpy.types.NodeTree:
         asset = bpy.data.node_groups.get(id)
         if (asset is None):
-            with bpy.data.libraries.load(LibraryLoader.LibraryPath, link=True, assets_only=True) as (data_from, data_to):
+            with bpy.data.libraries.load(LibraryLoader.LibraryPath, link=True, assets_only=True) as (data_from, data_to): # type: ignore
                 data_to.node_groups = [id]
 
             asset = bpy.data.node_groups.get(id)
@@ -43,7 +45,7 @@ class LibraryLoader:
         shader: ShaderNodeScShader = LibraryLoader.instantiate_node(
             "ShaderNodeScShader", node_tree, tree_id)  # type: ignore # noqa
 
-        props = bpy.context.scene.glTFSupercellImporterProperties
+        props = bpy.context.scene.glTFSupercellImporterProperties # type: ignore
         shader.preset_id = props.shader_preset
 
         return shader

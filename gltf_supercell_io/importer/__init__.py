@@ -1,4 +1,5 @@
 import bpy
+from bpy.types import ShaderNodeTree
 
 from ..com import glTF_extension_name, glTF_material_extension_name
 from ..com.odin.constants import OdinAttributeFormat, OdinAttributeType
@@ -18,16 +19,16 @@ from io_scene_gltf2.blender.imp.vnode import VNode
 from io_scene_gltf2.io.imp.gltf2_io_binary import BinaryData
 from io_scene_gltf2.blender.imp.animation_utils import get_or_create_action_and_slot, make_fcurve
 from io_scene_gltf2.blender.imp.material import BlenderMaterial
+from ui import glTFSupercellImporterProperties
 
 from typing import List, Dict, Any
-import numpy as np
 from pathlib import Path
 from mathutils import Vector
 
 
 class glTF2ImportUserExtension:
     def __init__(self):
-        self.properties = bpy.context.scene.glTFSupercellImporterProperties
+        self.properties: glTFSupercellImporterProperties = bpy.context.scene.glTFSupercellImporterProperties  # type: ignore
         self.extensions = [
             # Odin extension with custom meshes and animations store method
             Extension(name=glTF_extension_name, extension={}, required=True),
@@ -367,7 +368,7 @@ class glTF2ImportUserExtension:
         if not blender_mat.node_tree:
             blender_mat.use_nodes = True
 
-        tree = blender_mat.node_tree
+        tree: ShaderNodeTree = blender_mat.node_tree # type: ignore
         tree.nodes.clear()
 
         preset = ShaderPresets.get_preset_by_id(self.properties.shader_preset)
@@ -379,7 +380,7 @@ class glTF2ImportUserExtension:
             return
 
         if (self.properties.adjust_colorspace):
-            blender_scene.view_settings.view_transform = "Raw"
+            blender_scene.view_settings.view_transform = "Raw" # type: ignore
 
     def do_animation_channel(self, animation: OdinAnimationReader, duration: int, fps: float, path: str, values: list, anim_idx: int, node_idx: int, gltf: glTFImporter):
         vnodes: Dict[Any, VNode] = gltf.vnodes  # type: ignore
@@ -474,7 +475,7 @@ class glTF2ImportUserExtension:
                 if values[i].dot(values[i - 1]) < 0:
                     values[i] = -values[i]
 
-        fps = (fps * bpy.context.scene.render.fps_base)
+        fps = (fps * bpy.context.scene.render.fps_base) # type: ignore
 
         coords = [0] * (2 * duration)
         coords[::2] = ((animation.frame_spf * i) *  # type: ignore
@@ -498,9 +499,9 @@ class glTF2ImportUserExtension:
             return
         animation = OdinAnimation.Create(gltf, descriptor)
 
-        fps = bpy.context.scene.render.fps
+        fps = bpy.context.scene.render.fps # type: ignore
         if (self.properties.fps_source == 'SEQUENCE'):
-            bpy.context.scene.render.fps = int(animation.frame_rate)
+            bpy.context.scene.render.fps = int(animation.frame_rate) # type: ignore
             fps = animation.frame_rate
         elif (self.properties.fps_source == 'CUSTOM'):
             fps = self.properties.fps_custom

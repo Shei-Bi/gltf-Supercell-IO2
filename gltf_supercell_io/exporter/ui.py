@@ -25,6 +25,9 @@ class glTFSupercellExporterProperties(PropertyGroup):
 
 
 def draw_export(context, layout):
+    if (bpy.context.scene is None):
+        return
+    
     header, body = layout.panel(glTF_extension_name, default_closed=False)
     header.use_property_split = False
 

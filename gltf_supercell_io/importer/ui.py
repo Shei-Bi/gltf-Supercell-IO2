@@ -74,6 +74,9 @@ class glTFSupercellImporterProperties(PropertyGroup):
 
 
 def draw_import(context: Context, layout: UILayout):
+    if (not bpy.context.scene):
+        return
+    
     header, body = layout.panel(glTF_extension_name, default_closed=False)
     header.label(text="Supercell")
     header.use_property_split = False

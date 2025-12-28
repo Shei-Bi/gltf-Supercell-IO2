@@ -1,9 +1,9 @@
 {
     "reportInvalidTypeForm": "none",
     "reportMissingModuleSource": "none",
+    "reportAttributeAccessIssue": "information",
     "pythonVersion": "3.11",
     "extraPaths": [
-        "C:/Program Files/Blender Foundation/Blender 5.0/5.0/scripts/modules",
         "C:/Program Files/Blender Foundation/Blender 5.0/5.0/scripts/addons_core"
     ],
     "typeCheckingMode": "standard"

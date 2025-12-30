@@ -10,19 +10,6 @@ from .com.shader.handler import shader_linkage_handler
 from .importer.ui import glTFSupercellImporterProperties
 from .exporter.ui import glTFSupercellExporterProperties
 import bpy
-bl_info = {
-    "name": "glTF Supercell IO",
-    "author": "DaniilSV",
-    "description": "",
-    "blender": (5, 0, 0),
-    "version": (1, 0, 0),
-    "location": "",
-    "warning": "",
-    "category": "Generic",
-}
-
-
-# Initialization functions for glTF importer extension
 
 classes = [
     glTFSupercellImporterProperties,  # Importer properties

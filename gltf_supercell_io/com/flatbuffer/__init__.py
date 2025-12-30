@@ -2,20 +2,7 @@ from flatbuffers import flexbuffers, Builder
 from enum import IntEnum
 import numpy as np
 from collections import OrderedDict
-
-import importlib.util
-import sys
-import pathlib
-
-# HACK: since generated code need to be imported as variable, which is not possible with relative imports
-# we manually load the module here
-current_path = pathlib.Path(__file__).parent
-module_path = pathlib.Path(current_path, "glTF_generated.py")
-spec = importlib.util.spec_from_file_location("glTF_generated", module_path)
-flat = importlib.util.module_from_spec(spec)
-sys.modules["glTF_generated"] = flat
-spec.loader.exec_module(flat)
-
+from . import glTF_generated as flat
 
 class AccessorType(IntEnum):
     SCALAR = 0

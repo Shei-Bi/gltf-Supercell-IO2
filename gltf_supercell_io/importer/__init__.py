@@ -19,7 +19,7 @@ from io_scene_gltf2.blender.imp.vnode import VNode
 from io_scene_gltf2.io.imp.gltf2_io_binary import BinaryData
 from io_scene_gltf2.blender.imp.animation_utils import get_or_create_action_and_slot, make_fcurve
 from io_scene_gltf2.blender.imp.material import BlenderMaterial
-from ui import glTFSupercellImporterProperties
+from .ui import glTFSupercellImporterProperties
 
 from typing import List, Dict, Any
 from pathlib import Path
@@ -131,8 +131,9 @@ class glTF2ImportUserExtension:
                 if (scene.nodes is None):
                     root_nodes = scene.nodes
                     break
-
-        if (self.properties.single_skeleton and len(root_nodes)):
+                    
+        is_skinned = len(gltf.data.skins or []) != 0 #or len(gltf.data.animations or []) != 0
+        if (self.properties.single_skeleton and len(root_nodes) and is_skinned):
             # Most of animations doesn't have actual skin
             # We should create placeholder one, so blender could process it properly
             if (len(skins) == 0):

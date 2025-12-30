@@ -10,13 +10,19 @@ class glTFSupercellExporterProperties(PropertyGroup):
         description='Include this extension in the exported glTF file.',
         default=True
     )
-    
+
     path_prefix: StringProperty(
         name="Texture prefix",
         description="Exports textures with this prefix if needed",
         default="sc3d/"
     )
-    
+
+    legacy_meshes: BoolProperty(
+        name="Legacy meshes",
+        description="Exports mesh data in legacy format",
+        default=False
+    )
+
     legacy_materials: BoolProperty(
         name="Legacy materials",
         description="Exports materials in legacy format",
@@ -24,16 +30,20 @@ class glTFSupercellExporterProperties(PropertyGroup):
     )
 
 
-def draw_export(context, layout):
+def draw_export(context: bpy.context, layout: bpy.types.UILayout):
     if (bpy.context.scene is None):
         return
     
-    header, body = layout.panel(glTF_extension_name, default_closed=False)
-    header.use_property_split = False
-
     props = bpy.context.scene.glTFSupercellExporterProperties
 
+    header, body = layout.panel(glTF_extension_name, default_closed=False)
+    header.use_property_split = False
     header.prop(props, "enabled")
-    if body != None:
+    if (body):
         body.prop(props, "path_prefix")
-        body.prop(props, "legacy_materials")
+    
+        legacy_header, legacy_body = body.panel("Legacy", default_closed=True)
+        legacy_header.label(text="Legacy")
+        if (legacy_body):
+            legacy_body.prop(props, "legacy_meshes")
+            legacy_body.prop(props, "legacy_materials")

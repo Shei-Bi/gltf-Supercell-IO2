@@ -55,7 +55,7 @@ class glTF2ImportUserExtension:
         # 2 - Float Vector 4
         # 3 - Matrix4x4
 
-        accessors: List[Accessor] = gltf.data.accessors
+        accessors: List[Accessor] = gltf.data.accessors or []
         for accessor in accessors:
             accessor.component_type = accessor.component_type & 0x0000FFFF
 

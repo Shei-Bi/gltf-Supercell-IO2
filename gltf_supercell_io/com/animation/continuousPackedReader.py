@@ -25,17 +25,17 @@ class OdinContinuousPackedReader(OdinPackedReader):
         rotation = [
             np.zeros((frame_count), dtype=np.int16)
             for _ in range(RotationChannels)
-        ] if flags.has_rotation else None
+        ]
 
         translation = [
             np.zeros((frame_count), dtype=np.int16)
             for _ in range(TranslationChannels)
-        ] if flags.has_translation else None
+        ]
 
         scale = [
             np.zeros((frame_count), dtype=np.int16)
             for _ in range(ScaleChannels)
-        ] if (flags.has_scale or flags.has_separate_scale) else None
+        ]
 
         if (not flags.has_transform):
             return (translation, rotation, scale)
@@ -50,15 +50,15 @@ class OdinContinuousPackedReader(OdinPackedReader):
 
                 # Repeat latest transforms for all transform channels
                 for _ in range(repeat_keyframe_count):
-                    if (rotation is not None):
+                    if (flags.has_rotation):
                         for i in range(RotationChannels):
                             rotation[i][frame_index] = rotation[i][frame_index - 1]
 
-                    if (translation is not None):
+                    if (flags.has_translation):
                         for i in range(TranslationChannels):
                             translation[i][frame_index] = translation[i][frame_index - 1]
 
-                    if (scale is not None):
+                    if (flags.has_scale or flags.has_separate_scale):
                         for i in range(ScaleChannels):
                             scale[i][frame_index] = scale[i][frame_index - 1]
 
@@ -76,18 +76,18 @@ class OdinContinuousPackedReader(OdinPackedReader):
                     # Skip for now. Idk why it exist at all. Maybe for compatibility with gltf animations
                     frametime = self.read_normalized_value()
 
-                if (rotation is not None):
+                if (flags.has_rotation):
                     for i in range(RotationChannels):
                         rotation[i][frame_index] = self.read_normalized_value()
 
-                if (translation is not None):
+                if (flags.has_translation):
                     for i in range(TranslationChannels):
                         translation[i][frame_index] = self.read_normalized_value()
 
-                if (scale is not None and flags.has_scale and flags.has_separate_scale):
+                if (flags.has_scale and flags.has_separate_scale):
                     for i in range(ScaleChannels):
                         scale[i][frame_index] = self.read_normalized_value()
-                elif (scale is not None):
+                elif (flags.has_scale):
                     value = self.read_normalized_value()
                     for i in range(ScaleChannels):
                         scale[i][frame_index] = value

@@ -339,7 +339,7 @@ class glTF2ImportUserExtension:
             self.decode_primitive(gltf, primitive)
 
     def gather_import_material_before_hook(self, gltf_material: Material, vertex_color: str, gltf: glTFImporter):
-        if (not self.valid_gltf(gltf)):
+        if (not self.valid_gltf(gltf) or vertex_color):
             return
 
         extensions = gltf_material.extensions = gltf_material.extensions or {}

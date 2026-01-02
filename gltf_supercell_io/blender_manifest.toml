@@ -4,13 +4,13 @@ id = "gltf_supercell_io"
 version = "1.0.0"
 name = "glTF Supercell IO"
 tagline = "Supercell glTF importer/exporter extension"
-maintainer = "DaniilSV"
+maintainer = "DaniilSV <daniilsivacenko@gmail.com>"
 type = "add-on"
 website = "https://github.com/Daniil-SV/gltf-Supercell-IO"
 
 # Optional list defined by Blender and server, see:
 # https://docs.blender.org/manual/en/dev/advanced/extensions/tags.html
-tags = ["Import-Export"]
+tags = ["Import-Export", "Node", "Pipeline"]
 
 blender_version_min = "5.0.0"
 # # Optional: Blender version that the extension does not support, earlier versions are supported.
@@ -48,12 +48,3 @@ wheels = [
 #
 [permissions]
 files = "Import/export glTF from/to disk"
-
-# Optional: build settings.
-# https://docs.blender.org/manual/en/dev/advanced/extensions/command_line_arguments.html#command-line-args-extension-build
-# [build]
-# paths_exclude_pattern = [
-#   "__pycache__/",
-#   "/.git/",
-#   "/*.zip",
-# ]

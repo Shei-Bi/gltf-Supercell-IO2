@@ -5,6 +5,7 @@ from bpy.types import Material
 from ..com.shader.nodes.shader import ShaderNodeScShader
 from ..com import glTF_material_extension_name, glTF_extension_name
 from ..com.shader.exporter import ShaderExporter
+from ..com.utilities import ShaderUtils
 
 from io_scene_gltf2.io.com.gltf2_io import Material as glMaterial
 from io_scene_gltf2.blender.exp.material.search_node_tree import get_material_nodes, check_if_is_linked_to_active_output
@@ -82,17 +83,20 @@ class glTF2ExportUserExtension:
                 glTF_extension_name, extension, True
             )
 
+        gltf.asset.generator += " | Supercell-IO Exporter by DaniilSV"
+
     def gather_material_hook(self, gltf2_material: glMaterial, blender_material: Material, export_settings: dict):
-        gltf2_material.alpha_mode
+        tree = ShaderUtils.get_node_tree(blender_material)
         nodes = get_material_nodes(
-            blender_material.node_tree, [
-                blender_material.node_tree],  # type: ignore
+            tree,
+            [tree],
             ShaderNodeScShader
         )
 
         nodes = [
             node for node in nodes if check_if_is_linked_to_active_output(
-                node[0].outputs[0], node[1])
+                node[0].outputs[0], node[1]
+            )
         ]
 
         material = None

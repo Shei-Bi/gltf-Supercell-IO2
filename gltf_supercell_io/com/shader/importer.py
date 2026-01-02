@@ -9,7 +9,7 @@ from io_scene_gltf2.io.com.gltf2_io import Image as glImage
 from typing import Tuple, Dict
 from ..materials import ScShaderMaterial, ScBlendMode
 from ..materials.variables import ShaderFloatVectorProperty, ShaderFloatProperty, ShaderTextureProperty, ShaderBooleanProperty, ShaderProperty
-from . import ShaderUtils
+from ..utilities import ShaderUtils
 from .loader import LibraryLoader
 
 from typing import TYPE_CHECKING, Type
@@ -30,7 +30,7 @@ class ShaderImporter(ShaderUtils):
         self.gltf = gltf
         self.sc_material = sc_material
         self.material = material
-        self.tree: ShaderNodeTree = self.material.node_tree  # type: ignore
+        self.tree: ShaderNodeTree = ShaderUtils.get_node_tree(material)
         self.preset = preset
 
         self.node_counter = 0

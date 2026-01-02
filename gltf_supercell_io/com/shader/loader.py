@@ -1,7 +1,7 @@
 import bpy
 import os
 
-from bpy.types import ShaderNodeTree
+from bpy.types import ShaderNodeTree, NodeTree
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -17,7 +17,7 @@ class LibraryLoader:
     )
 
     @staticmethod
-    def load_shader_tree(id: str) -> bpy.types.NodeTree:
+    def load_shader_tree(id: str) -> ShaderNodeTree:
         asset = bpy.data.node_groups.get(id)
         if (asset is None):
             with bpy.data.libraries.load(LibraryLoader.LibraryPath, link=True, assets_only=True) as (data_from, data_to): # type: ignore
@@ -27,6 +27,9 @@ class LibraryLoader:
             if asset is None:
                 raise ImportError("Failed to instantiate Supercell IO shader")
 
+        if (not isinstance(asset, ShaderNodeTree)):
+            raise TypeError("Loaded asset is not a ShaderNodeTree")
+        
         return asset
 
     @staticmethod
@@ -34,7 +37,7 @@ class LibraryLoader:
         shader: ShaderNodeScNode = node_tree.nodes.new(type_id)  # type: ignore # noqa
         shader.tree_id = tree_id
 
-        return shader  # type: ignore
+        return shader
 
     @staticmethod
     def instantiate_utility(node_tree: ShaderNodeTree, tree_id: str) -> 'ShaderNodeScUtility':

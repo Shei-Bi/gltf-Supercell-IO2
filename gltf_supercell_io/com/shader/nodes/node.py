@@ -1,8 +1,14 @@
-import bpy
 from bpy.types import ShaderNodeCustomGroup
 from bpy.props import StringProperty
 from ..loader import LibraryLoader
 
+def update_tree(self, context):
+    if not self.tree_id or self.tree_id == "":
+        return
+
+    tree = LibraryLoader.load_shader_tree(self.tree_id)
+    self.node_tree = tree
+    self.width = tree.default_group_node_width
 
 class ShaderNodeScNode(ShaderNodeCustomGroup):
     bl_idname = "ShaderNodeScNode"
@@ -11,16 +17,8 @@ class ShaderNodeScNode(ShaderNodeCustomGroup):
 
     tree_id: StringProperty(
         default="",
-        update=lambda self, ctx: self.init_tree(ctx)
+        update=update_tree
     )
-
-    def init_tree(self, context):
-        if not self.tree_id or self.tree_id == "":
-            return
-
-        tree = LibraryLoader.load_shader_tree(self.tree_id)
-        self.node_tree = tree
-        self.width = tree.default_group_node_width
 
     def copy(self, node):
         self.tree_id = node.tree_id

@@ -44,6 +44,12 @@ class glTF2ImportUserExtension:
         used = gltf.data.extensions_used or []
         has_extension = glTF_extension_name in required
         has_shader = glTF_material_extension_name in used
+        
+        # Sometimes extensions is empty, but we still need to know if it's Supercell glTF
+        # So, try to look for extension descriptor
+        if (not has_extension and not has_shader and gltf.data.materials):
+            material = gltf.data.materials[0]
+            has_shader = material.extensions is not None and glTF_material_extension_name in material.extensions
 
         return has_extension or has_shader
 
@@ -210,6 +216,7 @@ class glTF2ImportUserExtension:
         # Shared cache for all meshes import operations
         gltf.supercell_vertex_cache = {}  # type: ignore
         gltf.supercell_vertex_accessor_offset = 0  # type: ignore
+
 
     def gather_import_node_before_hook(self, vnode: VNode, node: Node | None, gltf: glTFImporter):
         """Some nodes (especially in animation files) may have invalid indices, we need to clean them up to avoid errors"""
@@ -379,7 +386,7 @@ class glTF2ImportUserExtension:
     def gather_import_scene_after_nodes_hook(self, gltf_scene, blender_scene: bpy.types.Scene, gltf):
         if (not self.valid_gltf(gltf)):
             return
-
+        
         if (self.properties.adjust_colorspace):
             blender_scene.view_settings.view_transform = "Raw" # type: ignore
 

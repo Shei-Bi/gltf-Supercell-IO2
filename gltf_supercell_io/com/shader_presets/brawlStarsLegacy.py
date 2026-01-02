@@ -57,7 +57,8 @@ class BrawlStarsLegacy(ShaderPresetDescriptor):
             # Optional lightmap vector for import process
             if (light_vector is not None and node is not None):
                 shader.material.node_tree.links.new(
-                    node.inputs[0], light_vector)
+                    node.inputs[0], light_vector
+                )
 
         shader.set_float_prop("opacity", OPACITY)
         shader.set_texture_prop("opacityTex2D", OPACITY)

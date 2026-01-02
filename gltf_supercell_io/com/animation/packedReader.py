@@ -220,15 +220,3 @@ class OdinPackedReader(OdinAnimationReader):
 
     def get_translation(self, node_idx: int):
         return self.data[node_idx][0]
-
-    def get_frame_data(self, node_index: int, frame_index: int) -> Tuple[list, list, list]:
-        translation, rotation, scale = self.data[node_index]
-
-        return (
-            [channel[frame_index] for channel in translation] 
-                if translation is not None else None,
-            [channel[frame_index] for channel in rotation] 
-                if rotation is not None else None,
-            [channel[frame_index] for channel in scale] 
-                if scale is not None else None
-        ) # type: ignore

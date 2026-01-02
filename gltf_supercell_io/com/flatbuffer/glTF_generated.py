@@ -46,10 +46,8 @@ class AnimationSamplerInterpolationAlgorithm(object):
     LINEAR = 0
     # "description": "The animated values remain constant to the output of the first keyframe, until the next keyframe. The number of output elements must equal the number of input elements."
     STEP = 1
-    # "description": "The animation's interpolation is computed using a uniform Catmull-Rom spline. The number of output elements must equal two more than the number of input elements. The first and last output elements represent the start and end tangents of the spline. There must be at least four keyframes when using this interpolation."
-    CATMULLROMSPLINE = 2
     # "description": "The animation's interpolation is computed using a cubic spline with specified tangents. The number of output elements must equal three times the number of input elements. For each input element, the output stores three elements, an in-tangent, a spline vertex, and an out-tangent. There must be at least two keyframes when using this interpolation."
-    CUBICSPLINE = 3
+    CUBICSPLINE = 2
 
 
 #----------------------------------------------------------------------------
@@ -58,15 +56,13 @@ class AnimationSamplerInterpolationAlgorithm(object):
 class BufferViewTarget(object):
     ARRAY_BUFFER = 34962
     ELEMENT_ARRAY_BUFFER = 34963
-    # originally added for flatgltf
-    UNIFORM_BUFFER = 35345
 
 
 # "description": "Specifies if the camera uses a perspective or orthographic projection."
 # "gltf_detailedDescription": "Specifies if the camera uses a perspective or orthographic projection.  Based on this, either the camera's `perspective` or `orthographic` property will be defined."
 class CameraType(object):
-    perspective = 0
-    orthographic = 1
+    orthographic = 0
+    perspective = 1
 
 
 # "description": "The alpha rendering mode of the material."
@@ -94,6 +90,7 @@ class MeshPrimitiveMode(object):
 #----------------------------------------------------------------------------
 # "gltf_detailedDescription": "All valid values correspond to WebGL enums."
 class SamplerFilter(object):
+    NONE = 0
     NEAREST = 9728
     LINEAR = 9729
     NEAREST_MIPMAP_NEAREST = 9984
@@ -258,8 +255,8 @@ class AccessorSparseValues(object):
     def BufferView(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
-        return -1
+            return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
+        return 0
 
     # "description": "The offset relative to the start of the bufferView in bytes. Must be aligned."
     # AccessorSparseValues
@@ -329,7 +326,7 @@ def AccessorSparseValuesStart(builder):
     builder.StartObject(4)
 
 def AccessorSparseValuesAddBufferView(builder, bufferView):
-    builder.PrependInt32Slot(0, bufferView, -1)
+    builder.PrependUint32Slot(0, bufferView, 0)
 
 def AccessorSparseValuesAddByteOffset(builder, byteOffset):
     builder.PrependInt32Slot(1, byteOffset, 0)
@@ -522,7 +519,7 @@ class Accessor(object):
     def ByteOffset(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
+            return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
         return 0
 
     # "description": "The datatype of components in the attribute."
@@ -541,7 +538,7 @@ class Accessor(object):
     def Count(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
+            return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
         return 0
 
     # "description": "Sparse storage of attributes that deviate from their initialization value."
@@ -697,7 +694,7 @@ class Accessor(object):
     def Type(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(26))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
+            return self._tab.Get(flatbuffers.number_types.Uint8Flags, o + self._tab.Pos)
         return 0
 
 def AccessorStart(builder):
@@ -707,13 +704,13 @@ def AccessorAddBufferView(builder, bufferView):
     builder.PrependInt32Slot(0, bufferView, -1)
 
 def AccessorAddByteOffset(builder, byteOffset):
-    builder.PrependInt32Slot(1, byteOffset, 0)
+    builder.PrependUint32Slot(1, byteOffset, 0)
 
 def AccessorAddComponentType(builder, componentType):
     builder.PrependUint32Slot(2, componentType, 5120)
 
 def AccessorAddCount(builder, count):
-    builder.PrependInt32Slot(3, count, 0)
+    builder.PrependUint32Slot(3, count, 0)
 
 def AccessorAddSparse(builder, sparse):
     builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(sparse), 0)
@@ -749,7 +746,7 @@ def AccessorStartExtrasVector(builder, numElems):
     return builder.StartVector(1, numElems, 1)
 
 def AccessorAddType(builder, type):
-    builder.PrependInt8Slot(11, type, 0)
+    builder.PrependUint8Slot(11, type, 0)
 
 def AccessorEnd(builder):
     return builder.EndObject()
@@ -777,10 +774,9 @@ class Asset(object):
     def Init(self, buf, pos):
         self._tab = flatbuffers.table.Table(buf, pos)
 
-    # The user-defined name of this object.
-    # gltf_detailedDescription: The user-defined name of this object.  This is not necessarily unique, e.g., an accessor and a buffer could have the same name, or two accessors could even have the same name.
+    # A copyright message suitable for display to credit the content creator.
     # Asset
-    def Name(self):
+    def Copyright(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             return self._tab.String(o + self._tab.Pos)
@@ -868,19 +864,11 @@ class Asset(object):
             return self._tab.String(o + self._tab.Pos)
         return None
 
-    # A copyright message suitable for display to credit the content creator.
-    # Asset
-    def Copyright(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
-        if o != 0:
-            return self._tab.String(o + self._tab.Pos)
-        return None
-
 def AssetStart(builder):
-    builder.StartObject(7)
+    builder.StartObject(6)
 
-def AssetAddName(builder, name):
-    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
+def AssetAddCopyright(builder, copyright):
+    builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(copyright), 0)
 
 def AssetAddExtensions(builder, extensions):
     builder.PrependUOffsetTRelativeSlot(1, flatbuffers.number_types.UOffsetTFlags.py_type(extensions), 0)
@@ -902,9 +890,6 @@ def AssetAddMinVersion(builder, minVersion):
 
 def AssetAddVersion(builder, version):
     builder.PrependUOffsetTRelativeSlot(5, flatbuffers.number_types.UOffsetTFlags.py_type(version), 0)
-
-def AssetAddCopyright(builder, copyright):
-    builder.PrependUOffsetTRelativeSlot(6, flatbuffers.number_types.UOffsetTFlags.py_type(copyright), 0)
 
 def AssetEnd(builder):
     return builder.EndObject()
@@ -1000,7 +985,7 @@ class AnimationChannelTarget(object):
     def Path(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
+            return self._tab.Get(flatbuffers.number_types.Uint8Flags, o + self._tab.Pos)
         return 0
 
 def AnimationChannelTargetStart(builder):
@@ -1022,7 +1007,7 @@ def AnimationChannelTargetAddNode(builder, node):
     builder.PrependInt32Slot(2, node, -1)
 
 def AnimationChannelTargetAddPath(builder, path):
-    builder.PrependInt8Slot(3, path, 0)
+    builder.PrependUint8Slot(3, path, 0)
 
 def AnimationChannelTargetEnd(builder):
     return builder.EndObject()
@@ -1242,7 +1227,7 @@ class AnimationSampler(object):
     def Interpolation(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Int8Flags, o + self._tab.Pos)
+            return self._tab.Get(flatbuffers.number_types.Uint8Flags, o + self._tab.Pos)
         return 0
 
     # "description": "The index of an accessor, containing keyframe output values."
@@ -1273,7 +1258,7 @@ def AnimationSamplerAddInput(builder, input):
     builder.PrependInt32Slot(2, input, 0)
 
 def AnimationSamplerAddInterpolation(builder, interpolation):
-    builder.PrependInt8Slot(3, interpolation, 0)
+    builder.PrependUint8Slot(3, interpolation, 0)
 
 def AnimationSamplerAddOutput(builder, output):
     builder.PrependInt32Slot(4, output, 0)
@@ -1612,8 +1597,8 @@ class BufferView(object):
     def Buffer(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
-        return 0
+            return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
+        return -1
 
     # BufferView
     def ByteLength(self):
@@ -1643,20 +1628,11 @@ class BufferView(object):
             return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
         return 0
 
-    # "description": "The target that the GPU buffer should be bound to."
-    # "gltf_webgl": "`bindBuffer()`"     
-    # BufferView
-    def Target(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
-        if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
-        return 34962
-
     # The user-defined name of this object.
     # gltf_detailedDescription: The user-defined name of this object.  This is not necessarily unique, e.g., an accessor and a buffer could have the same name, or two accessors could even have the same name.
     # BufferView
     def Name(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
         if o != 0:
             return self._tab.String(o + self._tab.Pos)
         return None
@@ -1664,7 +1640,7 @@ class BufferView(object):
     # Dictionary object with extension-specific objects.
     # BufferView
     def Extensions(self, j):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
         if o != 0:
             a = self._tab.Vector(o)
             return self._tab.Get(flatbuffers.number_types.Uint8Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
@@ -1672,27 +1648,27 @@ class BufferView(object):
 
     # BufferView
     def ExtensionsAsNumpy(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
         if o != 0:
             return self._tab.GetVectorAsNumpy(flatbuffers.number_types.Uint8Flags, o)
         return 0
 
     # BufferView
     def ExtensionsLength(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
         if o != 0:
             return self._tab.VectorLen(o)
         return 0
 
     # BufferView
     def ExtensionsIsNone(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
         return o == 0
 
     # Application-specific data.
     # BufferView
     def Extras(self, j):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(18))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
         if o != 0:
             a = self._tab.Vector(o)
             return self._tab.Get(flatbuffers.number_types.Uint8Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
@@ -1700,28 +1676,37 @@ class BufferView(object):
 
     # BufferView
     def ExtrasAsNumpy(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(18))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
         if o != 0:
             return self._tab.GetVectorAsNumpy(flatbuffers.number_types.Uint8Flags, o)
         return 0
 
     # BufferView
     def ExtrasLength(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(18))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
         if o != 0:
             return self._tab.VectorLen(o)
         return 0
 
     # BufferView
     def ExtrasIsNone(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(18))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
         return o == 0
+
+    # "description": "The target that the GPU buffer should be bound to."
+    # "gltf_webgl": "`bindBuffer()`"     
+    # BufferView
+    def Target(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(18))
+        if o != 0:
+            return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
+        return 34962
 
 def BufferViewStart(builder):
     builder.StartObject(8)
 
 def BufferViewAddBuffer(builder, buffer):
-    builder.PrependUint32Slot(0, buffer, 0)
+    builder.PrependInt32Slot(0, buffer, -1)
 
 def BufferViewAddByteLength(builder, byteLength):
     builder.PrependUint32Slot(1, byteLength, 0)
@@ -1732,23 +1717,23 @@ def BufferViewAddByteOffset(builder, byteOffset):
 def BufferViewAddByteStride(builder, byteStride):
     builder.PrependUint32Slot(3, byteStride, 0)
 
-def BufferViewAddTarget(builder, target):
-    builder.PrependInt32Slot(4, target, 34962)
-
 def BufferViewAddName(builder, name):
-    builder.PrependUOffsetTRelativeSlot(5, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
+    builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
 
 def BufferViewAddExtensions(builder, extensions):
-    builder.PrependUOffsetTRelativeSlot(6, flatbuffers.number_types.UOffsetTFlags.py_type(extensions), 0)
+    builder.PrependUOffsetTRelativeSlot(5, flatbuffers.number_types.UOffsetTFlags.py_type(extensions), 0)
 
 def BufferViewStartExtensionsVector(builder, numElems):
     return builder.StartVector(1, numElems, 1)
 
 def BufferViewAddExtras(builder, extras):
-    builder.PrependUOffsetTRelativeSlot(7, flatbuffers.number_types.UOffsetTFlags.py_type(extras), 0)
+    builder.PrependUOffsetTRelativeSlot(6, flatbuffers.number_types.UOffsetTFlags.py_type(extras), 0)
 
 def BufferViewStartExtrasVector(builder, numElems):
     return builder.StartVector(1, numElems, 1)
+
+def BufferViewAddTarget(builder, target):
+    builder.PrependUint32Slot(7, target, 34962)
 
 def BufferViewEnd(builder):
     return builder.EndObject()
@@ -2119,7 +2104,7 @@ class Camera(object):
     def Type(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Int16Flags, o + self._tab.Pos)
+            return self._tab.Get(flatbuffers.number_types.Uint16Flags, o + self._tab.Pos)
         return 0
 
     # The user-defined name of this object.
@@ -2169,7 +2154,7 @@ def CameraStartExtrasVector(builder, numElems):
     return builder.StartVector(1, numElems, 1)
 
 def CameraAddType(builder, type):
-    builder.PrependInt16Slot(2, type, 0)
+    builder.PrependUint16Slot(2, type, 0)
 
 def CameraAddName(builder, name):
     builder.PrependUOffsetTRelativeSlot(3, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
@@ -3092,7 +3077,7 @@ class Material(object):
     def AlphaMode(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(24))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Int16Flags, o + self._tab.Pos)
+            return self._tab.Get(flatbuffers.number_types.Uint16Flags, o + self._tab.Pos)
         return 0
 
 def MaterialStart(builder):
@@ -3138,7 +3123,7 @@ def MaterialAddAlphaCutoff(builder, alphaCutoff):
     builder.PrependFloat32Slot(9, alphaCutoff, 0.5)
 
 def MaterialAddAlphaMode(builder, alphaMode):
-    builder.PrependInt16Slot(10, alphaMode, 0)
+    builder.PrependUint16Slot(10, alphaMode, 0)
 
 def MaterialEnd(builder):
     return builder.EndObject()
@@ -4100,7 +4085,7 @@ class Sampler(object):
     def WrapS(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
+            return self._tab.Get(flatbuffers.number_types.Uint16Flags, o + self._tab.Pos)
         return 10497
 
     # "description": "t wrapping mode."
@@ -4110,7 +4095,7 @@ class Sampler(object):
     def WrapT(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(6))
         if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
+            return self._tab.Get(flatbuffers.number_types.Uint16Flags, o + self._tab.Pos)
         return 10497
 
     # "description": "Magnification filter."
@@ -4121,7 +4106,7 @@ class Sampler(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(8))
         if o != 0:
             return self._tab.Get(flatbuffers.number_types.Uint16Flags, o + self._tab.Pos)
-        return 9728
+        return 0
 
     # "description": "Minification filter."
     # "gltf_detailedDescription": "Minification filter.  All valid values correspond to WebGL enums."
@@ -4131,7 +4116,7 @@ class Sampler(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(10))
         if o != 0:
             return self._tab.Get(flatbuffers.number_types.Uint16Flags, o + self._tab.Pos)
-        return 9728
+        return 0
 
     # The user-defined name of this object.
     # gltf_detailedDescription: The user-defined name of this object.  This is not necessarily unique, e.g., an accessor and a buffer could have the same name, or two accessors could even have the same name.
@@ -4202,16 +4187,16 @@ def SamplerStart(builder):
     builder.StartObject(7)
 
 def SamplerAddWrapS(builder, wrapS):
-    builder.PrependInt32Slot(0, wrapS, 10497)
+    builder.PrependUint16Slot(0, wrapS, 10497)
 
 def SamplerAddWrapT(builder, wrapT):
-    builder.PrependInt32Slot(1, wrapT, 10497)
+    builder.PrependUint16Slot(1, wrapT, 10497)
 
 def SamplerAddMagFilter(builder, magFilter):
-    builder.PrependUint16Slot(2, magFilter, 9728)
+    builder.PrependUint16Slot(2, magFilter, 0)
 
 def SamplerAddMinFilter(builder, minFilter):
-    builder.PrependUint16Slot(3, minFilter, 9728)
+    builder.PrependUint16Slot(3, minFilter, 0)
 
 def SamplerAddName(builder, name):
     builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)

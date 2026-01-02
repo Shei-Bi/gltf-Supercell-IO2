@@ -12,13 +12,15 @@ class OdinRawAnimationReader(OdinAnimationReader):
         self.keyframe_mapping = animation.get("keyframeCounts")
 
         nodes_per_keyframe: list[int] = animation.get(
-            "nodesNumberPerKeyframe")  # type: ignore
+            "nodesNumberPerKeyframe"
+        )  # type: ignore
         if (self.keyframe_mapping):
             self.keyframe_mapping = [num for i, num in enumerate(
                 self.keyframe_mapping) for _ in range(nodes_per_keyframe[i])]
 
         self.buffer = BinaryData.decode_accessor(
-            gltf, animation.get("accessor"))
+            gltf, animation.get("accessor")
+        )
         self.data: np.ndarray = None  # type: ignore
 
     def read(self):
@@ -35,6 +37,3 @@ class OdinRawAnimationReader(OdinAnimationReader):
         else:
             self.data = np.reshape(self.buffer, (len(
                 self.used_nodes), self.keyframe_count, frame_transform_length))
-
-    def get_frame_data(self, node_index: int, frame_index: int):  # type: ignore
-        return np.array_split(self.data[node_index][frame_index], [3, 7])

@@ -14,7 +14,7 @@ def write_gltf(json: dict, buffer: bytes):
 def patched_write_file(fallback):
     """Patch the exporter to use the custom write_gltf function"""
     def __write_file(json, buffer, export_settings):
-        props = bpy.context.scene.glTFSupercellExporterProperties
+        props = bpy.context.scene.glTFSupercellExporterProperties # type: ignore
         if (not props.optimize_json):
             return fallback(json, buffer, export_settings)
 

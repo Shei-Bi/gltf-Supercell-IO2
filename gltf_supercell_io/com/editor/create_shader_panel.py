@@ -2,6 +2,7 @@ import bpy
 from bpy.types import Panel, Operator
 from ..shader.loader import LibraryLoader
 from ..shader_presets import ShaderPresets, ShaderPresetType
+from ..utilities import ShaderUtils
 
 
 class SHADER_OT_SC_create_shader(Operator):
@@ -12,12 +13,20 @@ class SHADER_OT_SC_create_shader(Operator):
 
     def execute(self, context):  # type: ignore
         preset = ShaderPresets.get_preset_by_id(self.shader_id)
-        obj = bpy.context.active_object
-        mat = obj.active_material
-        if (not mat.node_tree):
-            mat.use_nodes = True
+        obj = context.active_object
+        if (obj is None):
+            self.report({'WARNING'}, "No active object")
+            return {'CANCELLED'}
 
-        node = LibraryLoader.instantiate_shader(mat.node_tree, self.shader_id)
+        mat = obj.active_material
+        if (mat is None):
+            self.report({'WARNING'}, "No active material")
+            return {'CANCELLED'}
+
+        node = LibraryLoader.instantiate_shader(
+            ShaderUtils.get_node_tree(mat),
+            self.shader_id
+        )
         node.label = preset.shader_label
 
         return {'FINISHED'}

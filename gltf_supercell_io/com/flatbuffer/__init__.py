@@ -2,7 +2,9 @@ from flatbuffers import flexbuffers, Builder
 from enum import IntEnum
 import numpy as np
 from collections import OrderedDict
+from typing import Any
 from . import glTF_generated as flat
+
 
 class AccessorType(IntEnum):
     SCALAR = 0
@@ -109,7 +111,6 @@ gltf_schema = {
     ],
     "asset": {
         "_type": flat.Asset,
-        "name": str,
         "copyright": str,
         "generator": str,
         "version": str,
@@ -137,7 +138,7 @@ gltf_schema = {
             "byteStride": (int, 0),
             "target": (int, 34962),
             "extensions": bytes,
-            # "extras": bytes, # struct.error :
+            "extras": bytes,
         }
     ],
     "extensionsRequired": [str],
@@ -286,7 +287,7 @@ def pascal_case(value: str):
     return value[0].upper() + value[1:]
 
 
-def preprocess_data(data: any, clean: bool = False) -> any:
+def preprocess_data(data: Any, clean: bool = False) -> Any:
     """
     The `preprocess_data` function takes in any data and applies specific preprocessing steps based on
     the data type.
@@ -356,14 +357,14 @@ def preprocess_dict(data: dict) -> dict:
     return result
 
 
-def deserialize_string(data: bytes | None) -> str:
+def deserialize_string(data: bytes | None) -> str | None:
     if data is None:
         return None
 
     return data.decode("utf8")
 
 
-def deserialize_flexbuffer(data: np.ndarray) -> any:
+def deserialize_flexbuffer(data: np.ndarray) -> Any:
     if isinstance(data, int) and data == 0:
         return None
 
@@ -374,10 +375,10 @@ def deserialize_flexbuffer(data: np.ndarray) -> any:
         pass
 
 
-def deserialize_array(buffer: any, key: str, schema: any) -> list:
+def deserialize_array(buffer: Any, key: str, schema: Any) -> list | None:
     # List of numbers
     if schema == int or schema == float:
-        number_array = getattr(buffer, f"{key}AsNumpy")()
+        number_array: np.ndarray = getattr(buffer, f"{key}AsNumpy")()
         if isinstance(number_array, int) and number_array == 0:
             return None
         return number_array.tolist()
@@ -399,7 +400,7 @@ def deserialize_array(buffer: any, key: str, schema: any) -> list:
         return result
 
 
-def deserialize_flatbuffer(buffer: any, schema: dict, clean: bool = False) -> dict:
+def deserialize_flatbuffer(buffer: Any, schema: dict, clean: bool = False) -> dict:
     result = OrderedDict()
 
     for key, value in schema.items():
@@ -469,17 +470,13 @@ def deserialize_glb_json(data: bytes, clean: bool = False) -> dict:
     flatbuffer = flat.Root.GetRootAs(bytearray(data))
 
     output = deserialize_flatbuffer(flatbuffer, gltf_schema, clean)
-    asset_info = output.get("asset", {"version": "2.0"})
-    asset_info["generator"] = "Supercell glTF Converter by DaniilSV"
-    output["asset"] = asset_info
-
     return preprocess_data(output, clean)
 
 
 #! ---------------- Serializing ----------------
 
 
-def serialize_gather(builder: Builder, class_name: str, gather: dict) -> any:
+def serialize_gather(builder: Builder, class_name: str, gather: dict) -> Any:
     """
     A place where dark magic happens.
     Serializes a dictionary `gather` into a flatbuffer using the
@@ -508,7 +505,7 @@ def serialize_gather(builder: Builder, class_name: str, gather: dict) -> any:
 
 
 def serialize_array(
-    builder: Builder, data: list, schema: any, class_name: str, key: str
+    builder: Builder, data: list, schema: Any, class_name: str, key: str
 ) -> int or list:
     if schema == int:
         array = np.array(data, dtype=np.int32)
@@ -542,10 +539,13 @@ def serialize_array(
         return builder.EndVector()
 
 
-def serialize_flatbuffer(builder: Builder, data: dict, schema: dict) -> any:
+def serialize_flatbuffer(builder: Builder, data: dict, schema: dict) -> Any:
     gather = {}
 
-    class_name = schema.get("_type").__name__
+    class_type = schema.get("_type")
+    if (class_type is None):
+        raise Exception("Schema must have a _type field")
+    class_name = class_type.__name__
     for key, value in schema.items():
         if key.startswith("_"):
             continue

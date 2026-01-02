@@ -21,14 +21,13 @@ class OdinAnimationReader:
         raise NotImplementedError()
 
     def get_scale(self, node_idx: int):
+        """Returns scale keyframes for the given node index"""
         return None
 
     def get_translation(self, node_idx: int):
+        """Returns translation keyframes for the given node index"""
         return None
 
     def get_rotation(self, node_idx: int):
+        """Returns rotation keyframes for the given node index"""
         return None
-
-    def get_frame_data(self, node_index: int, frame_index: int) -> Tuple[list, list, list] | np.ndarray:
-        """Returns frame data for specific node in format (Translation, Rotation, Scale)"""
-        raise NotImplementedError()

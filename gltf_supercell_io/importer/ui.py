@@ -1,30 +1,29 @@
-import bpy
-from bpy.types import UILayout, Context, PropertyGroup, AddonPreferences
+from bpy.types import UILayout, Context, PropertyGroup
 from bpy.props import BoolProperty, EnumProperty, FloatProperty
 from ..com.shader_presets import ShaderPresetType
 from ..com import glTF_extension_name
 
 fps_source_items = (
     ('SEQUENCE', 'Sequence',
-     'The sequence frame rate matches the original frame rate', 
+     'The sequence frame rate matches the original frame rate',
      'ACTION', 0
-    ),
-    ('SCENE', 'Scene', 
-     'The sequence is resampled to the frame rate of the scene', 
+     ),
+    ('SCENE', 'Scene',
+     'The sequence is resampled to the frame rate of the scene',
      'SCENE_DATA', 1
-    ),
+     ),
     ('CUSTOM', 'Custom', 'The sequence is resampled to a custom frame rate', 2),
 )
 
 materials_source_items = (
-    ('IMPORT', 'Import', 
-     'Creates new materials as usual, so even if the materials exist, new instances will be created specifically for the imported resources', 
+    ('IMPORT', 'Import',
+     'Creates new materials as usual, so even if the materials exist, new instances will be created specifically for the imported resources',
      'FILE_NEW', 0
-    ),
-    ('EXISTINGS', 'Existing', 
-     'Attempts to use existing materials in the scene. Useful for assets that are split across multiple files but share the same material.', 
+     ),
+    ('EXISTINGS', 'Existing',
+     'Attempts to use existing materials in the scene. Useful for assets that are split across multiple files but share the same material.',
      'BLENDER', 1
-    )
+     )
 )
 
 
@@ -69,19 +68,21 @@ class glTFSupercellImporterProperties(PropertyGroup):
         soft_max=60.0,
         step=100,
     )
-    
-    material_source: EnumProperty(name='Material Source', items=materials_source_items)
+
+    material_source: EnumProperty(
+        name='Material Source', items=materials_source_items
+    )
 
 
 def draw_import(context: Context, layout: UILayout):
-    if (not bpy.context.scene):
+    if (not context.scene):
         return
-    
+
     header, body = layout.panel(glTF_extension_name, default_closed=False)
     header.label(text="Supercell")
     header.use_property_split = False
 
-    props = bpy.context.scene.glTFSupercellImporterProperties
+    props = context.scene.glTFSupercellImporterProperties  # type: ignore
     if body is None:
         return
 

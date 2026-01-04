@@ -1,13 +1,10 @@
 from typing import List, Tuple
 from .flags import OdinAnimationFlags
 from .reader import OdinAnimationReader
+from .reader import TranslationChannels, RotationChannels, ScaleChannels
 from io_scene_gltf2.io.imp.gltf2_io_gltf import glTFImporter
 from io_scene_gltf2.io.imp.gltf2_io_binary import BinaryData
 import numpy as np
-
-RotationChannels = 4
-TranslationChannels = 3
-ScaleChannels = 3
 
 
 class OdinPackedReader(OdinAnimationReader):

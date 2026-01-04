@@ -1,7 +1,10 @@
-from typing import Tuple, List
+from typing import Tuple, List, Any, Sequence
 from .flags import OdinAnimationFlags
 import numpy as np
 
+RotationChannels = 4
+TranslationChannels = 3
+ScaleChannels = 3
 
 class OdinAnimationReader:
     def __init__(self, animation: dict):
@@ -20,14 +23,14 @@ class OdinAnimationReader:
         """Reads buffer data"""
         raise NotImplementedError()
 
-    def get_scale(self, node_idx: int):
+    def get_scale(self, node_idx: int) -> Sequence[Sequence[float]] | None:
         """Returns scale keyframes for the given node index"""
         return None
 
-    def get_translation(self, node_idx: int):
+    def get_translation(self, node_idx: int) -> Sequence[Sequence[float]] | None:
         """Returns translation keyframes for the given node index"""
         return None
 
-    def get_rotation(self, node_idx: int):
+    def get_rotation(self, node_idx: int) -> Sequence[Sequence[float]] | None:
         """Returns rotation keyframes for the given node index"""
         return None

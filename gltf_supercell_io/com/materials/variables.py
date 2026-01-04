@@ -21,7 +21,7 @@ class ShaderFloatProperty(ShaderProperty):
     """Shader float property"""
 
     def __init__(self, value: float = 0.0):
-        if (not isinstance(value, float) and not isinstance(value, int)):
+        if (not isinstance(value, (float, int))):
             raise TypeError("Incorrect float property value type")
         self.number = float(value)
 
@@ -34,7 +34,7 @@ class ShaderFloatVectorProperty(ShaderProperty):
     """Shader float vector property"""
 
     def __init__(self, vector: List[float] = []):
-        if (not is_typed_array(vector, float) and not is_typed_array(vector, int)):
+        if (not is_typed_array(vector, (float, int))):
             raise TypeError("Incorrect float array property value type")
 
         self.vector = [float(num) for num in vector]

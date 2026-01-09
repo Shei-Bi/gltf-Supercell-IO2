@@ -11,7 +11,7 @@ from io_scene_gltf2.io.com import gltf2_io
 from io_scene_gltf2.blender.exp.cache import cached
 from io_scene_gltf2.io.com.constants import TextureFilter, TextureWrap
 from ..utilities import ShaderUtils
-from pathlib import PurePosixPath
+from pathlib import Path
 from typing import Any
 
 
@@ -122,10 +122,10 @@ class ShaderExporter:
         if (node is None or node.image is None):
             return
 
-        path = PurePosixPath(node.image.name)
+        path = Path(node.image.name).as_posix()
         prefix = props.path_prefix
-        if (prefix and not name.startswith(prefix)):
-            path = PurePosixPath(prefix) / path
+        if ((prefix and path) and not str(path).startswith(prefix) and not str(path).startswith("sc/")):
+            path = (Path(prefix) / Path(path)).as_posix()
 
         texture_info = str(path)
         if (props.legacy_materials):

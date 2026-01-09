@@ -48,10 +48,11 @@ def draw_export(context: bpy.context, layout: bpy.types.UILayout):
     if (body):
         # TODO: implement odin extension and return back this option
         # For now always export materials in legacy format
-        #body.prop(props, "path_prefix")
-        body.prop(props, "use_odin")
+        body.prop(props, "path_prefix")
+        #body.prop(props, "use_odin")
 
-    if (body and not props.use_odin):
+    #if (body and not props.use_odin):
+    if (body):
         legacy_header, legacy_body = body.panel("Legacy", default_closed=True)
         legacy_header.label(text="Legacy")
         if (legacy_body):

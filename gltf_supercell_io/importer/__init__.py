@@ -44,7 +44,7 @@ class glTF2ImportUserExtension:
         used = gltf.data.extensions_used or []
         has_extension = glTF_extension_name in required
         has_shader = glTF_material_extension_name in used
-        
+
         # Sometimes extensions is empty, but we still need to know if it's Supercell glTF
         # So, try to look for extension descriptor
         if (not has_extension and not has_shader and gltf.data.materials):
@@ -137,9 +137,10 @@ class glTF2ImportUserExtension:
                 if (scene.nodes is None):
                     root_nodes = scene.nodes
                     break
-                    
-        is_skinned = len(gltf.data.skins or []) != 0 #or len(gltf.data.animations or []) != 0
-        if (self.properties.single_skeleton and len(root_nodes) and is_skinned):
+
+        is_embedded_animation = len(gltf.data.meshes or []) != 0 and len(
+            gltf.data.animations or []) != 0
+        if (self.properties.single_skeleton and not is_embedded_animation):
             # Most of animations doesn't have actual skin
             # We should create placeholder one, so blender could process it properly
             if (len(skins) == 0):
@@ -216,7 +217,6 @@ class glTF2ImportUserExtension:
         # Shared cache for all meshes import operations
         gltf.supercell_vertex_cache = {}  # type: ignore
         gltf.supercell_vertex_accessor_offset = 0  # type: ignore
-
 
     def gather_import_node_before_hook(self, vnode: VNode, node: Node | None, gltf: glTFImporter):
         """Some nodes (especially in animation files) may have invalid indices, we need to clean them up to avoid errors"""
@@ -376,7 +376,7 @@ class glTF2ImportUserExtension:
         if not blender_mat.node_tree:
             blender_mat.use_nodes = True
 
-        tree: ShaderNodeTree = blender_mat.node_tree # type: ignore
+        tree: ShaderNodeTree = blender_mat.node_tree  # type: ignore
         tree.nodes.clear()
 
         preset = ShaderPresets.get_preset_by_id(self.properties.shader_preset)
@@ -386,9 +386,9 @@ class glTF2ImportUserExtension:
     def gather_import_scene_after_nodes_hook(self, gltf_scene, blender_scene: bpy.types.Scene, gltf):
         if (not self.valid_gltf(gltf)):
             return
-        
+
         if (self.properties.adjust_colorspace):
-            blender_scene.view_settings.view_transform = "Raw" # type: ignore
+            blender_scene.view_settings.view_transform = "Raw"  # type: ignore
 
     def do_animation_channel(self, animation: OdinAnimationReader, duration: int, fps: float, path: str, values: list, anim_idx: int, node_idx: int, gltf: glTFImporter):
         vnodes: Dict[Any, VNode] = gltf.vnodes  # type: ignore
@@ -483,7 +483,7 @@ class glTF2ImportUserExtension:
                 if values[i].dot(values[i - 1]) < 0:
                     values[i] = -values[i]
 
-        fps = (fps * bpy.context.scene.render.fps_base) # type: ignore
+        fps = (fps * bpy.context.scene.render.fps_base)  # type: ignore
 
         coords = [0] * (2 * duration)
         coords[::2] = ((animation.frame_spf * i) *  # type: ignore
@@ -507,9 +507,9 @@ class glTF2ImportUserExtension:
             return
         animation = OdinAnimation.Create(gltf, descriptor)
 
-        fps = bpy.context.scene.render.fps # type: ignore
+        fps = bpy.context.scene.render.fps  # type: ignore
         if (self.properties.fps_source == 'SEQUENCE'):
-            bpy.context.scene.render.fps = int(animation.frame_rate) # type: ignore
+            bpy.context.scene.render.fps = int(animation.frame_rate)  # type: ignore # noqa
             fps = animation.frame_rate
         elif (self.properties.fps_source == 'CUSTOM'):
             fps = self.properties.fps_custom

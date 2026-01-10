@@ -106,7 +106,7 @@ class OdinPackedReader(OdinAnimationReader):
         for frame_index in range(frame_count):
             for i in range(TranslationChannels):
                 value = float(bTranslation[i])
-                if translation is not None:
+                if flags.has_translation:
                     transform = float(
                         nTranslation[i][frame_index]) * translation_multiplier
                     value += transform
@@ -114,14 +114,14 @@ class OdinPackedReader(OdinAnimationReader):
 
             for i in range(RotationChannels):
                 value = float(bRotation[i])
-                if rotation is not None:
+                if flags.has_rotation:
                     value = float(nRotation[i][frame_index]) / 32767.0
 
                 rotation[i][frame_index] = value
 
             for i in range(ScaleChannels):
                 value = float(bScale[i])
-                if scale is not None:
+                if flags.has_scale or flags.has_separate_scale:
                     transform = float(
                         nScale[i][frame_index]) * scale_multiplier
                     value += transform

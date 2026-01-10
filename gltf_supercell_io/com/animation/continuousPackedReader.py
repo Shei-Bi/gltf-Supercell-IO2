@@ -16,7 +16,8 @@ class OdinContinuousPackedReader(OdinPackedReader):
         if (rotation_accessor_idx is not None):
             self.rotation_counter = 0
             self.rotation_data = BinaryData.decode_accessor(
-                gltf, rotation_accessor_idx)
+                gltf, rotation_accessor_idx
+            )
             self.stride = 8
 
         self.elements_counter = 0
@@ -78,7 +79,7 @@ class OdinContinuousPackedReader(OdinPackedReader):
 
                 if (flags.has_rotation):
                     for i in range(RotationChannels):
-                        rotation[i][frame_index] = self.read_normalized_value()
+                        rotation[i][frame_index] = self.read_normalized_value() 
 
                 if (flags.has_translation):
                     for i in range(TranslationChannels):
@@ -111,7 +112,7 @@ class OdinContinuousPackedReader(OdinPackedReader):
             return super().read_base_rotation()
 
         result = [
-            self.rotation_data[self.rotation_counter + i]
+            self.rotation_data[self.rotation_counter + i]  / 32767.0
             for i in range(RotationChannels)
         ]
         self.rotation_counter += RotationChannels

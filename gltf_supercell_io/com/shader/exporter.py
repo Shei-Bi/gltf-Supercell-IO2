@@ -1,3 +1,4 @@
+from pathlib import PurePath
 import bpy
 from bpy.types import Material, Image, NodeSocketFloatFactor
 from ..materials import ScShaderMaterial, ScBlendMode
@@ -11,7 +12,6 @@ from io_scene_gltf2.io.com import gltf2_io
 from io_scene_gltf2.blender.exp.cache import cached
 from io_scene_gltf2.io.com.constants import TextureFilter, TextureWrap
 from ..utilities import ShaderUtils
-from pathlib import Path
 from typing import Any
 
 
@@ -122,10 +122,10 @@ class ShaderExporter:
         if (node is None or node.image is None):
             return
 
-        path = Path(node.image.name).as_posix()
+        path = PurePath(node.image.name).as_posix()
         prefix = props.path_prefix
         if ((prefix and path) and not str(path).startswith(prefix) and not str(path).startswith("sc/")):
-            path = (Path(prefix) / Path(path)).as_posix()
+            path = (PurePath(prefix) / PurePath(path)).as_posix()
 
         texture_info = str(path)
         if (props.legacy_materials):
@@ -180,9 +180,12 @@ class ShaderExporter:
         elif (isinstance(value, Image)):
             prop_type = ShaderTextureProperty
             sampler = ShaderExporter.create_legacy_sampler(
-                "REPEAT", "LINEAR", self.export_settings)
+                "REPEAT", "LINEAR", self.export_settings
+            )
             value = ShaderExporter.create_legacy_texture_info(
-                sampler, value.name, self.export_settings)
+                sampler, str(PurePath(value.name).as_posix()
+                             ), self.export_settings
+            )
 
         if (prop_type is None):
             print(
@@ -208,6 +211,12 @@ class ShaderExporter:
                 if (is_typed_array(self.shader[key], str)):
                     for constant in self.shader[key]:
                         self.sc_material.add_constant(constant)
+                continue
+            
+            # Handle custom or unusual shader name
+            if (key == "$shader"):
+                if (isinstance(self.shader[key], str)):
+                    self.sc_material.shader_name = self.shader[key]
                 continue
 
             self.set_custom_property(key, self.shader[key])

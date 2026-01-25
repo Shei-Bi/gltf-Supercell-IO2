@@ -50,8 +50,13 @@ class ShaderImporter(ShaderUtils):
         self.preset.import_shader(self)
         self.tree.links.new(output.inputs[0], self.shader.outputs[0])
 
+        # Preserve unsupported shader constants
         if (len(self.sc_material.unused_constants)):
             self.shader["$constants"] = self.sc_material.unused_constants
+            
+        # Preserve shader name, uber by default
+        if (self.sc_material.shader_name != "uber"):
+            self.shader["$shader"] = self.sc_material.shader_name
 
         for variable in self.sc_material.unused_variables:
             self.set_raw_shader_prop(variable)

@@ -6,13 +6,14 @@ from ..utilities import ShaderUtils
 
 
 class SHADER_OT_SC_create_shader(Operator):
-    bl_idname = "supercell.create_shader"
+    bl_idname = "supercell.create_tree"
     bl_label = "Create shader"
 
-    shader_id: bpy.props.StringProperty()
+    item_type: bpy.props.StringProperty()
+    item_id: bpy.props.StringProperty()
+    item_label: bpy.props.StringProperty()
 
     def execute(self, context):  # type: ignore
-        preset = ShaderPresets.get_preset_by_id(self.shader_id)
         obj = context.active_object
         if (obj is None):
             self.report({'WARNING'}, "No active object")
@@ -23,11 +24,24 @@ class SHADER_OT_SC_create_shader(Operator):
             self.report({'WARNING'}, "No active material")
             return {'CANCELLED'}
 
-        node = LibraryLoader.instantiate_shader(
-            ShaderUtils.get_node_tree(mat),
-            self.shader_id
-        )
-        node.label = preset.shader_label
+        if (self.item_type == "utility"):
+            node = LibraryLoader.instantiate_utility(
+                ShaderUtils.get_node_tree(mat),
+                self.item_id
+            )
+        else:
+            node = LibraryLoader.instantiate_shader(
+                ShaderUtils.get_node_tree(mat),
+                self.item_id
+            )
+
+            if (not self.item_label):
+                preset = ShaderPresets.get_preset_by_id(self.item_id)
+                node.label = preset.shader_label
+
+        if (node):
+            if (self.item_label):
+                node.label = self.item_label
 
         return {'FINISHED'}
 
@@ -40,7 +54,23 @@ class SHADER_PT_SC_create_shader(Panel):
 
     def draw(self, context):
         if (self.layout is not None):
-            self.layout.operator("supercell.create_shader", text="Create unlit shader")\
-                .shader_id = ShaderPresetType.UNLIT
-            self.layout.operator("supercell.create_shader", text="Create Brawl Stars Legacy shader")\
-                .shader_id = ShaderPresetType.BRAWL_STARS_LEGACY
+            self.layout.operator("supercell.create_tree", text="Create unlit shader")\
+                .item_id = ShaderPresetType.UNLIT
+            self.layout.operator("supercell.create_tree", text="Create Brawl Stars Legacy shader")\
+                .item_id = ShaderPresetType.BRAWL_STARS_LEGACY
+
+
+class SHADER_PT_SC_create_utilities(Panel):
+    bl_space_type = "NODE_EDITOR"
+    bl_region_type = "UI"
+    bl_label = "Utilities"
+    bl_category = "Supercell"
+
+    def draw(self, context):
+        if (self.layout is not None):
+            lightmap = self.layout.operator(
+                "supercell.create_tree", text="Create Lightmap UV"
+            )
+            lightmap.item_id = "ScLightmapUV"
+            lightmap.item_type = "utility"
+            lightmap.item_label = "Lightmaps"

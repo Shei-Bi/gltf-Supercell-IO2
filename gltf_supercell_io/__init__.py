@@ -4,7 +4,7 @@ from .importer import glTF2ImportUserExtension
 from .importer.ui import draw_import
 from .exporter import glTF2ExportUserExtension
 from .exporter.ui import draw_export
-from .com.editor import SHADER_OT_SC_create_shader, SHADER_PT_SC_create_shader
+from .com.editor import SHADER_OT_SC_create_shader, SHADER_PT_SC_create_shader, SHADER_PT_SC_create_utilities
 from .com.shader.nodes import ShaderNodeScShader, ShaderNodeScUtility, ShaderNodeScNode
 from .com.shader.handler import shader_linkage_handler
 from .importer.ui import glTFSupercellImporterProperties
@@ -19,6 +19,7 @@ classes = [
     ShaderNodeScShader,               # Custom shader node holder
     SHADER_PT_SC_create_shader,       # Custom shader graph panel
     SHADER_OT_SC_create_shader,       # Create shader operator
+    SHADER_PT_SC_create_utilities,    # Create utility node trees
 ]
 
 

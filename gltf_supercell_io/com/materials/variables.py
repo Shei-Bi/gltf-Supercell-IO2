@@ -48,7 +48,7 @@ class ShaderTextureProperty(ShaderProperty):
     """Shader texture property"""
 
     def __init__(self, data: str | Texture):
-        self.texture_path: str = ""
+        self.path: str = ""
         self.keywords: List[str] = []
         self.texture: Optional[Texture] = None
 
@@ -60,13 +60,17 @@ class ShaderTextureProperty(ShaderProperty):
             raise TypeError("Incorrect texture property value type")
 
     def set_path(self, path: str):
-        self.texture_path = path
+        self.path = path
         self.keywords = []
 
         if ("#" in path):
             path, keywords = path.split("#")
-            self.texture_path = path
+            self.path = path
             self.keywords = keywords.split("+") or []
+
+    @property
+    def extension(self):
+        return self.path.split(".")[-1]
 
     @property
     def value(self) -> Any:
@@ -74,9 +78,9 @@ class ShaderTextureProperty(ShaderProperty):
             return {"index": self.texture}
 
         if (len(self.keywords) == 0):
-            return self.texture_path
+            return self.path
 
-        return f"{self.texture_path}#{'+'.join(self.keywords)}"
+        return f"{self.path}#{'+'.join(self.keywords)}"
 
 
 class ShaderBooleanProperty(ShaderProperty):

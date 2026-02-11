@@ -122,12 +122,16 @@ class ShaderExporter:
         if (node is None or node.image is None):
             return
 
-        path = PurePath(node.image.name).as_posix()
-        prefix = props.path_prefix
-        if ((prefix and path) and not str(path).startswith(prefix) and not str(path).startswith("sc/")):
-            path = (PurePath(prefix) / PurePath(path)).as_posix()
+        texture = ShaderTextureProperty(node.image.name)
+        isSWF = texture.extension == "sc"
 
-        texture_info = str(path)
+        prefix = props.path_prefix
+        if ((prefix and texture) and not str(texture.path).startswith(prefix) and not isSWF):
+            texture = ShaderTextureProperty((PurePath(prefix) / PurePath(texture.value)).as_posix())
+        elif (isSWF and not str(texture.path).startswith("sc/") ):
+            texture = ShaderTextureProperty((PurePath("sc/") / PurePath(texture.value)).as_posix())
+
+        texture_info = texture.value
         if (props.legacy_materials):
             sampler = ShaderExporter.create_legacy_sampler(
                 node.extension, node.interpolation, self.export_settings
@@ -212,7 +216,7 @@ class ShaderExporter:
                     for constant in self.shader[key]:
                         self.sc_material.add_constant(constant)
                 continue
-            
+
             # Handle custom or unusual shader name
             if (key == "$shader"):
                 if (isinstance(self.shader[key], str)):

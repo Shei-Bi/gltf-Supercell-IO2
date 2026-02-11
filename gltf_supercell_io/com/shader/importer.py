@@ -53,7 +53,7 @@ class ShaderImporter(ShaderUtils):
         # Preserve unsupported shader constants
         if (len(self.sc_material.unused_constants)):
             self.shader["$constants"] = self.sc_material.unused_constants
-            
+
         # Preserve shader name, uber by default
         if (self.sc_material.shader_name != "uber"):
             self.shader["$shader"] = self.sc_material.shader_name
@@ -70,9 +70,9 @@ class ShaderImporter(ShaderUtils):
     def set_raw_shader_prop(self, raw_property: Tuple[str, ShaderProperty]):
         key, prop = raw_property
         if (isinstance(prop, ShaderTextureProperty)):
-            if (not prop.texture_path):
+            if (not prop.path):
                 return
-            
+
             image = self.load_texture_image(prop, True)
             self.shader[key] = image
             return
@@ -118,17 +118,18 @@ class ShaderImporter(ShaderUtils):
         # Should be more reliable for some edge cases
         self.gltf.data.images = self.gltf.data.images or []
         gltf_images = [image for image in self.gltf.data.images if image.uri ==
-                       prop.texture_path and image.blender_image_name is not None]
+                       prop.path and image.blender_image_name is not None]
         if (len(gltf_images) > 0):
             name = gltf_images[0].blender_image_name
             image = bpy.data.images[name]
             return image
 
-        path = Path(prop.texture_path)
+        path = Path(prop.path)
         extension = path.suffix
 
         if (extension == ".sc"):
-            print(f"Supercell Flash as textures not supported now. Creating empty texture for '{path}'")
+            print(
+                f"Supercell Flash as textures not supported now. Creating empty texture for '{path}'")
             preserve_path = True
 
         # Special handle for textures in custom properties
@@ -137,7 +138,7 @@ class ShaderImporter(ShaderUtils):
 
         def cache_image(image: Image):
             gltf_image = glImage(None, None, None, None,
-                                 prop.texture_path, prop.texture_path)
+                                 prop.path, prop.path)
             gltf_image.blender_image_name = image.name  # type: ignore
             self.gltf.data.images.append(gltf_image)
             image.colorspace_settings.name = "scene_linear"  # type: ignore
@@ -149,11 +150,11 @@ class ShaderImporter(ShaderUtils):
 
         if extension not in IMAGE_EXTENSIONS:
             print(
-                f"Caught unknown image extension while processing SC IO materials: {prop.texture_path}. Creating empty image...")
+                f"Caught unknown image extension while processing SC IO materials: {prop.path}. Creating empty image...")
             return fallback()
 
         # Firstly, trying to load texture as it is, and if blender supports that extension
-        absolute_path = join(self.basepath, prop.texture_path)
+        absolute_path = join(self.basepath, prop.path)
         if (exists(absolute_path) and extension in NATIVE_IMAGE_EXTENSIONS):
             image = bpy.data.images.load(absolute_path)
             cache_image(image)
@@ -163,11 +164,11 @@ class ShaderImporter(ShaderUtils):
         image = self.try_load_texture_image(path)
         if image is None:
             print(
-                f"Failed to load texture while generating SC IO materials: {prop.texture_path}. Creating empty image...")
+                f"Failed to load texture while generating SC IO materials: {prop.path}. Creating empty image...")
             return fallback()
 
         # Success
-        image.name = prop.texture_path
+        image.name = prop.path
         cache_image(image)
         return image
 
@@ -182,12 +183,12 @@ class ShaderImporter(ShaderUtils):
                 name, ShaderFloatVectorProperty
             )
             return
-        
-        if (not prop.texture_path):
+
+        if (not prop.path):
             return
 
         node = self.image_cache.get(
-            prop.texture_path
+            prop.path
         )  # type: ignore
         if (node is None):
             texture: ShaderNodeTexImage = self.tree.nodes.new(
@@ -210,7 +211,7 @@ class ShaderImporter(ShaderUtils):
             texture.location = x, y
             texture.extension = "REPEAT" if "repeat" in prop.keywords else "CLIP"
             self.node_counter += 1
-            node = self.image_cache[prop.texture_path] = texture
+            node = self.image_cache[prop.path] = texture
 
         self.tree.links.new(  # type: ignore
             self.shader.inputs[index], node.outputs[0]

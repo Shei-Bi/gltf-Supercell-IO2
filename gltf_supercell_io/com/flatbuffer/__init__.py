@@ -470,6 +470,18 @@ def deserialize_glb_json(data: bytes, clean: bool = False) -> dict:
     flatbuffer = flat.Root.GetRootAs(bytearray(data))
 
     output = deserialize_flatbuffer(flatbuffer, gltf_schema, clean)
+
+    # supercell has very weird targets
+    # should patch this if any
+    for mesh in output.get("meshes", []):
+        for primitive in mesh.get("primitives", []):
+            if ("targets" not in primitive):
+                continue
+            
+            targets = primitive.pop("targets")
+            extras = primitive["extras"] = primitive.get("extras", {})
+            extras["scTargets"] = targets
+
     return preprocess_data(output, clean)
 
 

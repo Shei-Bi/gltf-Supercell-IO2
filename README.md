@@ -19,9 +19,11 @@ Extension works on Blender 5.0+ *only*
 
 Installation
 ------------
-WIP
+Download plugin `.zip` from [Releases](https://github.com/Daniil-SV/gltf-Supercell-IO/releases)  
 
-What is currently supported
+Then, in Blender, go to `Edit -> Preferences` or just `Ctrl + ,` hotkey  
+Go to Add-ons tab and click on Add-on settings (down arrow in the upper right corner) and click on `Install from Disk...` and select `.zip` that you just downloaded
+
+Usage
 ------------
-Currently, basic file import, mesh import and animations are supported  
-TODO: Shaders import
+The plugin works together with the official gltf importer, which means you can import supercell glb as usual and it just works.  

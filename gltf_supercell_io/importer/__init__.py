@@ -322,13 +322,16 @@ class glTF2ImportUserExtension:
             pymaterial = gltf.data.materials[primitive.material]
             mat = pymaterial.blender_material
 
-            # Check if material already created and we just need to apply it to color
-            if (None in mat):
-                mat["COLOR_0"] = mat[None]
-            else:
-                # Else create material ahead of time and apply
-                mat["COLOR_0"] = mat[None] = BlenderMaterial.create(
+            # Create ahead of time
+            if (None not in mat):
+                BlenderMaterial.create(
                     gltf, primitive.material, None)
+
+            # Fill material variants dict
+            i = 0
+            while ('COLOR_%d' % i) in primitive.attributes:
+                mat[f"COLOR_{i}"] = mat[None]
+                i += 1
 
     def gather_import_mesh_options(self, mesh_options, pymesh: Mesh, skin_idx, gltf: glTFImporter):
         """Please khronos i need this. My glTF importer is kinda homeless"""

@@ -1598,7 +1598,7 @@ class BufferView(object):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(4))
         if o != 0:
             return self._tab.Get(flatbuffers.number_types.Int32Flags, o + self._tab.Pos)
-        return -1
+        return 0
 
     # BufferView
     def ByteLength(self):
@@ -1706,7 +1706,7 @@ def BufferViewStart(builder):
     builder.StartObject(8)
 
 def BufferViewAddBuffer(builder, buffer):
-    builder.PrependInt32Slot(0, buffer, -1)
+    builder.PrependInt32Slot(0, buffer, 0)
 
 def BufferViewAddByteLength(builder, byteLength):
     builder.PrependUint32Slot(1, byteLength, 0)

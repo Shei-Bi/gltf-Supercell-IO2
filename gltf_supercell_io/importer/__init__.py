@@ -349,7 +349,7 @@ class glTF2ImportUserExtension:
             self.decode_primitive(gltf, primitive)
 
     def gather_import_material_before_hook(self, gltf_material: Material, vertex_color: str, gltf: glTFImporter):
-        if (not self.valid_gltf(gltf) or vertex_color):
+        if (not self.valid_gltf(gltf)):
             return
 
         extensions = gltf_material.extensions = gltf_material.extensions or {}
@@ -358,8 +358,11 @@ class glTF2ImportUserExtension:
         if (descriptor is None):
             return
 
-        material = ScShaderMaterial()
-        material.from_dict(gltf, descriptor)
+        material = descriptor
+        if (isinstance(descriptor, dict)):
+            material = ScShaderMaterial()
+            material.from_dict(gltf, descriptor)
+
         extensions[glTF_material_extension_name] = material
         gltf_material.name = material.name
 

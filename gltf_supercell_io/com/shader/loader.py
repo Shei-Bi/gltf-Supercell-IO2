@@ -20,7 +20,8 @@ class LibraryLoader:
     def load_shader_tree(id: str) -> ShaderNodeTree:
         asset = bpy.data.node_groups.get(id)
         if (asset is None):
-            with bpy.data.libraries.load(LibraryLoader.LibraryPath, link=True, assets_only=True) as (data_from, data_to): # type: ignore
+            # type: ignore
+            with bpy.data.libraries.load(LibraryLoader.LibraryPath, link=True, assets_only=True) as (data_from, data_to):
                 data_to.node_groups = [id]
 
             asset = bpy.data.node_groups.get(id)
@@ -29,7 +30,7 @@ class LibraryLoader:
 
         if (not isinstance(asset, ShaderNodeTree)):
             raise TypeError("Loaded asset is not a ShaderNodeTree")
-        
+
         return asset
 
     @staticmethod
@@ -47,8 +48,6 @@ class LibraryLoader:
     def instantiate_shader(node_tree: ShaderNodeTree, tree_id: str) -> 'ShaderNodeScShader':
         shader: ShaderNodeScShader = LibraryLoader.instantiate_node(
             "ShaderNodeScShader", node_tree, tree_id)  # type: ignore # noqa
-
-        props = bpy.context.scene.glTFSupercellImporterProperties # type: ignore
-        shader.preset_id = props.shader_preset
+        shader.preset_id = tree_id
 
         return shader

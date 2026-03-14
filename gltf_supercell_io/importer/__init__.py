@@ -362,8 +362,8 @@ class glTF2ImportUserExtension:
         if (isinstance(descriptor, dict)):
             material = ScShaderMaterial()
             material.from_dict(gltf, descriptor)
+            extensions[glTF_material_extension_name] = material
 
-        extensions[glTF_material_extension_name] = material
         gltf_material.name = material.name
 
     def gather_import_material_after_hook(self, gltf_material: Material, vertex_color, blender_mat: bpy.types.Material, gltf: glTFImporter):

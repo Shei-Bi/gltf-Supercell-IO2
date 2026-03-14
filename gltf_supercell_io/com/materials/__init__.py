@@ -84,7 +84,7 @@ class ScShaderMaterial:
 
     def to_typed_dict(self):
         return {
-            "blendMode": int(self.blend_mode),
+            "blend_mode": int(self.blend_mode),
             "constants": self._constants,
             "name": self.name,
             "shader": self.shader_name or "uber",
@@ -94,7 +94,7 @@ class ScShaderMaterial:
     def to_dict(self):
         """Save material to dictionary"""
         return {
-            "blendMode": int(self.blend_mode),
+            "blend_mode": int(self.blend_mode),
             "constants": self._constants,
             "name": self.name,
             "sc_material": True,

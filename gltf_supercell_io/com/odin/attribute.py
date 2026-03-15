@@ -12,6 +12,7 @@ class OdinAttribute:
         self.type = type
         self.dtype = Format.to_numpy_dtype(self.format)
         self.elements_count = Format.to_element_count(self.format)
+        self.normalized = Type.is_normalized(self.type)
         self.data = buffer
 
     def read(self, offset: int) -> np.ndarray:
@@ -34,7 +35,7 @@ class OdinAttribute:
                     self.data, dtype=self.dtype, offset=offset, count=self.elements_count
                 )
 
-        if (self.type == Type.a_normal and np.issubdtype(self.dtype, np.integer)):
+        if (self.normalized and np.issubdtype(self.dtype, np.integer)):
             info = np.iinfo(self.dtype)
             array = array.astype(np.float32) / info.max
 

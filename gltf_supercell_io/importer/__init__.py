@@ -182,6 +182,10 @@ class glTF2ImportUserExtension:
         # Also very useful thing for mesh
         gltf.import_settings['merge_vertices'] = True
 
+        # This option breaks some meshes sometime
+        # Looks useful for some cases, but... not sure if it's worth to have it enabled by default
+        gltf.import_settings['guess_original_bind_pose'] = False
+
     def move_animation(self, gltf: glTFImporter):
         """Supercell also stores animations in the extension, 
             so they also need to be moved to the animations for proper processing. 

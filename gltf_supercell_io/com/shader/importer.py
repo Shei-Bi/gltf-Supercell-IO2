@@ -3,7 +3,7 @@ from __future__ import annotations
 import bpy
 from pathlib import Path
 from os.path import join, exists
-from bpy.types import ShaderNodeGroup, ShaderNodeTexImage, ShaderNodeOutputMaterial, Image, Material, ShaderNodeTree
+from bpy.types import ShaderNodeTexImage, ShaderNodeOutputMaterial, Image, Material, ShaderNodeTree
 from io_scene_gltf2.io.imp.gltf2_io_gltf import glTFImporter
 from io_scene_gltf2.io.com.gltf2_io import Image as glImage
 from typing import Tuple, Dict
@@ -142,6 +142,7 @@ class ShaderImporter(ShaderUtils):
             gltf_image.blender_image_name = image.name  # type: ignore
             self.gltf.data.images.append(gltf_image)
             image.colorspace_settings.name = "scene_linear"  # type: ignore
+            image.use_view_as_render = True
 
         def fallback():
             image = bpy.data.images.new(str(name), 1, 1)

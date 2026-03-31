@@ -130,6 +130,10 @@ class ShaderExporter:
             texture = ShaderTextureProperty((PurePath(prefix) / PurePath(texture.value)).as_posix())
         elif (isSWF and not str(texture.path).startswith("sc/") ):
             texture = ShaderTextureProperty((PurePath("sc/") / PurePath(texture.value)).as_posix())
+            
+        # Kinda sus, but okay
+        if (node.extension != "CLIP"):
+            texture.keywords.append(node.extension.lower())
 
         texture_info = texture.value
         if (props.legacy_materials):
@@ -144,10 +148,6 @@ class ShaderExporter:
         prop = self.sc_material.add_property(
             name, texture_info, ShaderTextureProperty
         )
-
-        # Kinda sus, but okay
-        if (node.extension != "CLIP"):
-            prop.keywords.append(node.extension.lower())
 
     def set_color_prop(self, name: str, index: int):
         """Set the color based on the socket"""

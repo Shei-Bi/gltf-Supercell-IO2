@@ -32,23 +32,33 @@ class ShaderImporter(ShaderUtils):
         self.material = material
         self.tree: ShaderNodeTree = ShaderUtils.get_node_tree(material)
         self.preset = preset
+        self.output: ShaderNodeOutputMaterial
 
-        self.node_counter = 0
-        self.util_node_pos_offset = -125
+        self.node_counter = 0  # Counter for texture nodes
+        self.utils_offset = -125  # Y offset for utilities nodes
+        self.x_offset = 0  # X offset for all nodes
         self.image_cache: Dict[str, ShaderNodeTexImage] = {}
         self.basepath = Path(gltf.import_settings["filepath"]).parent
 
     def import_material(self):
         self.setup_blending()
 
-        output: ShaderNodeOutputMaterial = self.tree.nodes.new(  # type: ignore
+        self.output: ShaderNodeOutputMaterial = self.tree.nodes.new(  # type: ignore
             'ShaderNodeOutputMaterial'
         )
-        output.location = 200, 100
+        self.output.location = 250, 100
 
+        modifier = self.setup_modifiers()
         self.shader = self.setup_shader()
         self.preset.import_shader(self)
-        self.tree.links.new(output.inputs[0], self.shader.outputs[0])
+        
+        if (modifier is not None):
+            first, last = modifier
+            
+            self.tree.links.new(first.inputs[0], self.shader.outputs[0])
+            self.tree.links.new(self.output.inputs[0], last.outputs[0])
+        else:
+            self.tree.links.new(self.output.inputs[0], self.shader.outputs[0])
 
         # Preserve unsupported shader constants
         if (len(self.sc_material.unused_constants)):
@@ -60,6 +70,19 @@ class ShaderImporter(ShaderUtils):
 
         for variable in self.sc_material.unused_variables:
             self.set_raw_shader_prop(variable)
+
+    def setup_modifiers(self):
+        result = []
+
+        if (self.sc_material.blend_mode == ScBlendMode.Multiply):
+            result.append(self.setup_modifier(
+                "ScMultiplyModifier", "Multiply"
+            ))
+
+        if (result):
+            return (result[0], result[-1])
+
+        return None
 
     def setup_blending(self):
         if self.sc_material.blend_mode == ScBlendMode.Opaque:
@@ -272,7 +295,23 @@ class ShaderImporter(ShaderUtils):
         )
 
         node.label = self.preset.shader_label
-        node.location = 40 - node.width, 100
+        node.location = 40 - node.width - self.x_offset, 100
+
+        return node
+
+    def setup_modifier(self, id: str, label: str):
+        node = LibraryLoader.instantiate_utility(
+            self.tree, id
+        )
+
+        node.label = label
+
+        # Base horizontal offset
+        x = -self.x_offset
+        y = 100
+        self.x_offset += node.width + 50
+
+        node.location = x, y
 
         return node
 
@@ -285,9 +324,9 @@ class ShaderImporter(ShaderUtils):
         x, y = self.shader.location
 
         # Base horizontal offset
-        x -= 1040
-        y = self.util_node_pos_offset
-        self.util_node_pos_offset -= node.height + 50
+        x -= 1040 + self.x_offset
+        y = self.utils_offset
+        self.utils_offset -= node.height + 50
 
         node.location = x, y
 

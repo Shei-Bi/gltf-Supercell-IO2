@@ -9,6 +9,7 @@ T = TypeVar('T', bound='ShaderProperty')
 class ScBlendMode(IntEnum):
     Unk = 5  # Seaweed?
     Opaque = 4
+    Multiply = 3
     Clip = 2  # Not sure about that
     Hashed = 1  # And this too
     Blend = 0

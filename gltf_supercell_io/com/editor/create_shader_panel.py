@@ -11,7 +11,7 @@ class SHADER_OT_SC_create_shader(Operator):
 
     item_type: bpy.props.StringProperty()
     item_id: bpy.props.StringProperty()
-    item_label: bpy.props.StringProperty()
+    item_label: bpy.props.StringProperty(default="")
 
     def execute(self, context):  # type: ignore
         obj = context.active_object
@@ -29,7 +29,7 @@ class SHADER_OT_SC_create_shader(Operator):
                 ShaderUtils.get_node_tree(mat),
                 self.item_id
             )
-        else:
+        elif (self.item_type == "shader"):
             node = LibraryLoader.instantiate_shader(
                 ShaderUtils.get_node_tree(mat),
                 self.item_id
@@ -38,6 +38,8 @@ class SHADER_OT_SC_create_shader(Operator):
             if (not self.item_label):
                 preset = ShaderPresets.get_preset_by_id(self.item_id)
                 node.label = preset.shader_label
+        else:
+            raise NotImplementedError()
 
         if (node):
             if (self.item_label):
@@ -54,10 +56,17 @@ class SHADER_PT_SC_create_shader(Panel):
 
     def draw(self, context):
         if (self.layout is not None):
-            self.layout.operator("supercell.create_tree", text="Create unlit shader")\
-                .item_id = ShaderPresetType.UNLIT
-            self.layout.operator("supercell.create_tree", text="Create Brawl Stars Legacy shader")\
-                .item_id = ShaderPresetType.BRAWL_STARS_LEGACY
+            unlit = self.layout.operator(
+                "supercell.create_tree", text="Create unlit shader"
+            )
+            unlit.item_id = ShaderPresetType.UNLIT
+            unlit.item_type = "shader"
+
+            bs_legacy = self.layout.operator(
+                "supercell.create_tree", text="Create Brawl Stars Legacy shader"
+            )
+            bs_legacy.item_id = ShaderPresetType.BRAWL_STARS_LEGACY
+            bs_legacy.item_type = "shader"
 
 
 class SHADER_PT_SC_create_utilities(Panel):
@@ -74,3 +83,10 @@ class SHADER_PT_SC_create_utilities(Panel):
             lightmap.item_id = "ScLightmapUV"
             lightmap.item_type = "utility"
             lightmap.item_label = "Lightmaps"
+
+            multiply = self.layout.operator(
+                "supercell.create_tree", text="Create Multiply Modifier"
+            )
+            multiply.item_id = "ScMultiplyModifier"
+            multiply.item_type = "utility"
+            multiply.item_label = "Multiply"

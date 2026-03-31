@@ -134,9 +134,16 @@ class glTF2ImportUserExtension:
             gltf.data.scenes = [Scene(None, None, None, root_nodes)]
         else:
             for scene in gltf.data.scenes:
-                if (scene.nodes is None):
+                if (scene.nodes is not None):
                     root_nodes = scene.nodes
                     break
+
+        # Some of root nodes may has scale(0, 0, 0) for some fucking reason
+        # Which is obviously wrong and which is cause for bones calculation errors later
+        for node_idx in root_nodes:
+            node: Node = gltf.data.nodes[node_idx]
+            if (node.scale == [0, 0, 0]):
+                node.scale = None
 
         is_embedded_animation = len(gltf.data.meshes or []) != 0 and len(
             gltf.data.animations or []) != 0

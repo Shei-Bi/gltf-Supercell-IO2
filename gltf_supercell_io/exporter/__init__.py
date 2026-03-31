@@ -2,18 +2,76 @@ import bpy
 import numpy as np
 from bpy.types import Material
 
-from ..com.shader.nodes.shader import ShaderNodeScShader
+from ..com.shader.nodes import ShaderNodeScShader, ShaderNodeScUtility
 from ..com import glTF_material_extension_name, glTF_extension_name
 from ..com.shader.exporter import ShaderExporter
 from ..com.utilities import ShaderUtils
 
 from io_scene_gltf2.io.com.gltf2_io import Material as glMaterial
-from io_scene_gltf2.blender.exp.material.search_node_tree import get_material_nodes, check_if_is_linked_to_active_output
+from io_scene_gltf2.blender.exp.material.search_node_tree import get_material_nodes
 from io_scene_gltf2.io.com.gltf2_io import Gltf
 from io_scene_gltf2.io.com.gltf2_io_extensions import Extension
 from io_scene_gltf2.io.com.gltf2_io import Accessor, Mesh, MeshPrimitive
 from io_scene_gltf2.io.com.constants import ComponentType, DataType
 from io_scene_gltf2.blender.exp.accessors import array_to_accessor
+
+
+def check_if_is_linked_to_active_output(shader_socket, group_path, modifiers: list[str]):
+
+    # Here, group_path must be copied, because if there are muliple links that enter/exit a group node
+    # This will modify it, and we don't want to modify the original group_path (from the parameter) inside the loop
+    for link in shader_socket.links:
+        is_modifier = isinstance(link.to_node, ShaderNodeScUtility)
+
+        # If we are entering a node group
+        if link.to_node.type == "GROUP" or is_modifier:
+            socket_name = link.to_socket.name
+            sockets = [
+                n for n in link.to_node.node_tree.nodes if n.type == "GROUP_INPUT"][0].outputs
+            socket = [s for s in sockets if s.name == socket_name][0]
+            new_group_path = group_path.copy()
+            new_group_path.append(link.to_node)
+
+            # Add modifier name to modifiers list
+            if (is_modifier):
+                modifier: ShaderNodeScUtility = link.to_node
+                modifiers.append(modifier.tree_id)
+
+            # TODOSNode : Why checking outputs[0] ? What about alpha for texture node, that is outputs[1] ????
+            # recursive until find an output material node
+            ret = check_if_is_linked_to_active_output(
+                socket, new_group_path, modifiers)
+            if ret is True:
+                return True
+            continue
+
+        # If we are exiting a node group
+
+        if link.to_node.type == "GROUP_OUTPUT":
+            socket_name = link.to_socket.name
+            sockets = group_path[-1].outputs
+            socket = [s for s in sockets if s.name == socket_name][0]
+            new_group_path = group_path[:-1]
+            # TODOSNode : Why checking outputs[0] ? What about alpha for texture node, that is outputs[1] ????
+            # recursive until find an output material node
+            ret = check_if_is_linked_to_active_output(
+                socket, new_group_path, modifiers)
+            if ret is True:
+                return True
+            continue
+
+        if isinstance(link.to_node, bpy.types.ShaderNodeOutputMaterial) and link.to_node.is_active_output is True:
+            return True
+
+        if len(link.to_node.outputs) > 0:  # ignore non active output, not having output sockets
+            # TODOSNode : Why checking outputs[0] ? What about alpha for texture node, that is outputs[1] ????
+            ret = check_if_is_linked_to_active_output(
+                link.to_node.outputs[0],
+                group_path, modifiers)  # recursive until find an output material node
+            if ret is True:
+                return True
+
+    return False
 
 
 class glTF2ExportUserExtension:
@@ -24,8 +82,8 @@ class glTF2ExportUserExtension:
         self.Extension = Extension
         self.properties = bpy.context.scene.glTFSupercellExporterProperties  # type: ignore
 
-    def export_sc_material(self, material: Material, shader: ShaderNodeScShader, export_settings: dict):
-        exporter = ShaderExporter(shader, material, export_settings)
+    def export_sc_material(self, material: Material, shader: ShaderNodeScShader, modifiers: list[str], export_settings: dict):
+        exporter = ShaderExporter(shader, material, modifiers, export_settings)
         material_data = exporter.export_material()
 
         return Extension(glTF_material_extension_name, material_data, False)
@@ -87,24 +145,26 @@ class glTF2ExportUserExtension:
 
     def gather_material_hook(self, gltf2_material: glMaterial, blender_material: Material, export_settings: dict):
         tree = ShaderUtils.get_node_tree(blender_material)
+
         nodes = get_material_nodes(
             tree,
             [tree],
             ShaderNodeScShader
         )
 
-        nodes = [
-            node for node in nodes if check_if_is_linked_to_active_output(
-                node[0].outputs[0], node[1]
-            )
-        ]
-
         material = None
-        if (len(nodes) != 0):
-            shader, tree = nodes[0]
+        for node in nodes:
+            modifiers = []
+            if not check_if_is_linked_to_active_output(
+                node[0].outputs[0], node[1], modifiers
+            ):
+                continue
+
             material = self.export_sc_material(
-                blender_material, shader, export_settings
+                blender_material, node[0], modifiers, export_settings
             )
+
+            break
 
         if (self.properties.legacy_materials):
             # Append as material extension in legacy format

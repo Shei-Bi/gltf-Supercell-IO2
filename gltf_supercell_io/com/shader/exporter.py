@@ -16,12 +16,14 @@ from typing import Any
 
 
 class ShaderExporter:
-    def __init__(self, shader: ShaderNodeScShader, material: Material, export_settings: dict):
+    def __init__(self, shader: ShaderNodeScShader, material: Material, modifiers: list[str], export_settings: dict):
         self.shader = shader
         self.material = material
         self.sc_material = ScShaderMaterial()
         self.preset = ShaderPresets.get_preset_by_id(
-            shader.preset_id)
+            shader.preset_id
+        )
+        self.modifiers = modifiers
         self.export_settings = export_settings
 
     def set_blend_from_opacity_socket(self, index: int):
@@ -127,10 +129,12 @@ class ShaderExporter:
 
         prefix = props.path_prefix
         if ((prefix and texture) and not str(texture.path).startswith(prefix) and not isSWF):
-            texture = ShaderTextureProperty((PurePath(prefix) / PurePath(texture.value)).as_posix())
-        elif (isSWF and not str(texture.path).startswith("sc/") ):
-            texture = ShaderTextureProperty((PurePath("sc/") / PurePath(texture.value)).as_posix())
-            
+            texture = ShaderTextureProperty(
+                (PurePath(prefix) / PurePath(texture.value)).as_posix())
+        elif (isSWF and not str(texture.path).startswith("sc/")):
+            texture = ShaderTextureProperty(
+                (PurePath("sc/") / PurePath(texture.value)).as_posix())
+
         # Kinda sus, but okay
         if (node.extension != "CLIP"):
             texture.keywords.append(node.extension.lower())
@@ -198,6 +202,10 @@ class ShaderExporter:
 
         self.sc_material.add_property(name, value, prop_type)
 
+    def export_modifiers(self):
+        if ("ScMultiplyModifier" in self.modifiers):
+            self.sc_material.blend_mode = ScBlendMode.Multiply
+
     def export_material(self):
         """Export the material to dictionary"""
         props = bpy.context.scene.glTFSupercellExporterProperties  # type: ignore
@@ -205,6 +213,9 @@ class ShaderExporter:
 
         # Export preset variables first
         self.preset.export_shader(self)
+
+        # Export modifiers
+        self.export_modifiers()
 
         # Then, export custom properties
         prop_keys = self.shader.keys()

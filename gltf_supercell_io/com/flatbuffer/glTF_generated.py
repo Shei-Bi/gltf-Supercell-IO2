@@ -1628,11 +1628,20 @@ class BufferView(object):
             return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
         return 0
 
+    # "description": "The target that the GPU buffer should be bound to."
+    # "gltf_webgl": "`bindBuffer()`"     
+    # BufferView
+    def Target(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
+        if o != 0:
+            return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
+        return 34962
+
     # The user-defined name of this object.
     # gltf_detailedDescription: The user-defined name of this object.  This is not necessarily unique, e.g., an accessor and a buffer could have the same name, or two accessors could even have the same name.
     # BufferView
     def Name(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(12))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
         if o != 0:
             return self._tab.String(o + self._tab.Pos)
         return None
@@ -1640,7 +1649,7 @@ class BufferView(object):
     # Dictionary object with extension-specific objects.
     # BufferView
     def Extensions(self, j):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
         if o != 0:
             a = self._tab.Vector(o)
             return self._tab.Get(flatbuffers.number_types.Uint8Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
@@ -1648,27 +1657,27 @@ class BufferView(object):
 
     # BufferView
     def ExtensionsAsNumpy(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
         if o != 0:
             return self._tab.GetVectorAsNumpy(flatbuffers.number_types.Uint8Flags, o)
         return 0
 
     # BufferView
     def ExtensionsLength(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
         if o != 0:
             return self._tab.VectorLen(o)
         return 0
 
     # BufferView
     def ExtensionsIsNone(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(14))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
         return o == 0
 
     # Application-specific data.
     # BufferView
     def Extras(self, j):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(18))
         if o != 0:
             a = self._tab.Vector(o)
             return self._tab.Get(flatbuffers.number_types.Uint8Flags, a + flatbuffers.number_types.UOffsetTFlags.py_type(j * 1))
@@ -1676,31 +1685,22 @@ class BufferView(object):
 
     # BufferView
     def ExtrasAsNumpy(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(18))
         if o != 0:
             return self._tab.GetVectorAsNumpy(flatbuffers.number_types.Uint8Flags, o)
         return 0
 
     # BufferView
     def ExtrasLength(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(18))
         if o != 0:
             return self._tab.VectorLen(o)
         return 0
 
     # BufferView
     def ExtrasIsNone(self):
-        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
-        return o == 0
-
-    # "description": "The target that the GPU buffer should be bound to."
-    # "gltf_webgl": "`bindBuffer()`"     
-    # BufferView
-    def Target(self):
         o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(18))
-        if o != 0:
-            return self._tab.Get(flatbuffers.number_types.Uint32Flags, o + self._tab.Pos)
-        return 34962
+        return o == 0
 
 def BufferViewStart(builder):
     builder.StartObject(8)
@@ -1717,23 +1717,23 @@ def BufferViewAddByteOffset(builder, byteOffset):
 def BufferViewAddByteStride(builder, byteStride):
     builder.PrependUint32Slot(3, byteStride, 0)
 
+def BufferViewAddTarget(builder, target):
+    builder.PrependUint32Slot(4, target, 34962)
+
 def BufferViewAddName(builder, name):
-    builder.PrependUOffsetTRelativeSlot(4, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
+    builder.PrependUOffsetTRelativeSlot(5, flatbuffers.number_types.UOffsetTFlags.py_type(name), 0)
 
 def BufferViewAddExtensions(builder, extensions):
-    builder.PrependUOffsetTRelativeSlot(5, flatbuffers.number_types.UOffsetTFlags.py_type(extensions), 0)
+    builder.PrependUOffsetTRelativeSlot(6, flatbuffers.number_types.UOffsetTFlags.py_type(extensions), 0)
 
 def BufferViewStartExtensionsVector(builder, numElems):
     return builder.StartVector(1, numElems, 1)
 
 def BufferViewAddExtras(builder, extras):
-    builder.PrependUOffsetTRelativeSlot(6, flatbuffers.number_types.UOffsetTFlags.py_type(extras), 0)
+    builder.PrependUOffsetTRelativeSlot(7, flatbuffers.number_types.UOffsetTFlags.py_type(extras), 0)
 
 def BufferViewStartExtrasVector(builder, numElems):
     return builder.StartVector(1, numElems, 1)
-
-def BufferViewAddTarget(builder, target):
-    builder.PrependUint32Slot(7, target, 34962)
 
 def BufferViewEnd(builder):
     return builder.EndObject()

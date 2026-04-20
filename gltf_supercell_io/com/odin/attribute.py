@@ -5,9 +5,11 @@ import numpy as np
 
 class OdinAttribute:
     def __init__(self, buffer: np.ndarray, format: Format, type: Type, offset: int, element_offset: int, stride: int) -> None:
-        self.element_offset = element_offset
-        self.offset = offset
-        self.stride = stride
+        # Normalize offsets to Python ints so numpy scalar arithmetic cannot overflow
+        # when Blender passes indices like np.uint16 during mesh import.
+        self.element_offset = int(element_offset)
+        self.offset = int(offset)
+        self.stride = int(stride)
         self.format = format
         self.type = type
         self.dtype = Format.to_numpy_dtype(self.format)
@@ -43,8 +45,9 @@ class OdinAttribute:
 
     def __getitem__(self, value: int | np.ndarray):
         if (isinstance(value, int) or isinstance(value, np.integer)):
-            offset = self.offset + (self.stride * value) + self.element_offset
-            return self.read(int(offset))
+            index = int(value)
+            offset = self.offset + (self.stride * index) + self.element_offset
+            return self.read(offset)
 
         elif (isinstance(value, np.ndarray)):
             return np.stack([

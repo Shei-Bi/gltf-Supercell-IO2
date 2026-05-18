@@ -1,17 +1,29 @@
-from .exporter.patch import patch_exporter
-from .importer.patch import patch_importer
-from .importer import glTF2ImportUserExtension
-from .importer.ui import draw_import
-from .exporter import glTF2ExportUserExtension
-from .exporter.ui import draw_export
-from .com.editor import SHADER_OT_SC_create_shader, SHADER_PT_SC_create_shader, SHADER_PT_SC_create_utilities
-from .com.shader.nodes import ShaderNodeScShader, ShaderNodeScUtility, ShaderNodeScNode
-from .com.shader.handler import shader_linkage_handler
-from .importer.ui import glTFSupercellImporterProperties
-from .exporter.ui import glTFSupercellExporterProperties
+
 import bpy
+from .com.editor.string_array import *
+from .exporter.ui import glTFSupercellExporterProperties
+from .importer.ui import glTFSupercellImporterProperties
+from .com.shader.handler import shader_linkage_handler
+from .com.shader.nodes import ShaderNodeScShader, ShaderNodeScUtility, ShaderNodeScNode
+from .com.editor import SHADER_OT_SC_create_shader, SHADER_PT_SC_create_shader, SHADER_PT_SC_create_utilities
+from .exporter.ui import draw_export
+from .exporter import glTF2ExportUserExtension
+from .importer.ui import draw_import
+from .importer import glTF2ImportUserExtension
+from .importer.patch import patch_importer
+from .exporter.patch import patch_exporter
+from .com.editor.string_array import StringItem, DirectoryStringItem, STRING_ARRAY_UL_items, STRING_ARRAY_OT_add, STRING_ARRAY_OT_remove, STRING_ARRAY_STATE
+from .preferences import SupercellGLTFPreferences
 
 classes = [
+    # String array panel
+    StringItem,
+    DirectoryStringItem,
+    STRING_ARRAY_UL_items,
+    STRING_ARRAY_OT_add,
+    STRING_ARRAY_OT_remove,
+    STRING_ARRAY_STATE,
+
     glTFSupercellImporterProperties,  # Importer properties
     glTFSupercellExporterProperties,  # Exporter properties
     ShaderNodeScNode,                 # Base class for custom nodes
@@ -20,6 +32,7 @@ classes = [
     SHADER_PT_SC_create_shader,       # Custom shader graph panel
     SHADER_OT_SC_create_shader,       # Create shader operator
     SHADER_PT_SC_create_utilities,    # Create utility node trees
+    SupercellGLTFPreferences          # Addon preferences
 ]
 
 
@@ -32,6 +45,9 @@ def register():
     )
     bpy.types.Scene.glTFSupercellExporterProperties = bpy.props.PointerProperty(
         type=glTFSupercellExporterProperties
+    )
+    bpy.types.WindowManager.scgltf_string_array_state = bpy.props.PointerProperty(
+        type=STRING_ARRAY_STATE
     )
 
     patch_importer()

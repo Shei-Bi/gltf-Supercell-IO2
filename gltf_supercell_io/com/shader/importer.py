@@ -11,6 +11,7 @@ from ..materials import ScShaderMaterial, ScBlendMode
 from ..materials.variables import ShaderFloatVectorProperty, ShaderFloatProperty, ShaderTextureProperty, ShaderBooleanProperty, ShaderProperty
 from ..utilities import ShaderUtils
 from .loader import LibraryLoader
+from ...preferences import get_prefs
 
 from typing import TYPE_CHECKING, Type
 if TYPE_CHECKING:
@@ -51,10 +52,10 @@ class ShaderImporter(ShaderUtils):
         modifier = self.setup_modifiers()
         self.shader = self.setup_shader()
         self.preset.import_shader(self)
-        
+
         if (modifier is not None):
             first, last = modifier
-            
+
             self.tree.links.new(first.inputs[0], self.shader.outputs[0])
             self.tree.links.new(self.output.inputs[0], last.outputs[0])
         else:
@@ -112,22 +113,29 @@ class ShaderImporter(ShaderUtils):
         return None
 
     def try_load_texture_image(self, path: Path) -> Image | None:
+        lookups = [self.basepath]
+        prefs = get_prefs()
+        if (prefs):
+            lookups += [string.value for string in prefs.texture_lookup]
+        
         for extension in IMAGE_EXTENSIONS:
-            paths = [
-                # Tweak for brawl stars, trying to use highres textures preferably
-                join(self.basepath, "highres", path.with_suffix(
-                    extension)),            # Default
-                join(self.basepath, "highres", Path(
-                    path.stem).with_suffix(extension)),  # Stem
+            paths = []
+            for lookup in lookups:
+                paths += [
+                    # Tweak for brawl stars, trying to use highres textures preferably
+                    join(lookup, "highres", path.with_suffix(
+                        extension)),            # Default
+                    join(lookup, "highres", Path(
+                        path.stem).with_suffix(extension)),  # Stem
 
-                # Default path
-                join(self.basepath, path.with_suffix(
-                    extension)), path.with_suffix(extension),
+                    # Default path
+                    join(lookup, path.with_suffix(
+                        extension)), path.with_suffix(extension),
 
-                # Using path stem
-                join(self.basepath, Path(path.stem).with_suffix(
-                    extension)), Path(path.stem).with_suffix(extension),
-            ]
+                    # Using path stem
+                    join(lookup, Path(path.stem).with_suffix(
+                        extension)), Path(path.stem).with_suffix(extension),
+                ]
 
             for maybe_path in paths:
                 if (exists(maybe_path)):

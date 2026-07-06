@@ -118,7 +118,7 @@ class ASSETS_PT_panel(bpy.types.Panel):
     bl_idname = "ASSETS_PT_panel"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
-    bl_category = "SC"
+    bl_category = "Supercell"
 
     def draw(self, context):
         layout = self.layout

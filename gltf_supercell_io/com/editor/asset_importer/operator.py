@@ -1,13 +1,12 @@
 import bpy
 import os
 from typing import Any, cast, TYPE_CHECKING
-from .helpers import clean_asset_browser_cache, tempdir
+from .helpers import tempdir
 from .worker import RefreshRequest, update_asset_browser
 from ...net.asset_request import (
     AssetRequest,
     AssetRequestServer,
     download_asset,
-    list_assets,
     list_versions,
 )
 from pathlib import Path

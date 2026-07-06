@@ -30,7 +30,6 @@ def load_ignore_patterns(root: Path):
 def should_ignore(path: Path, root: Path, patterns):
     rel_path = path.relative_to(root)
     rel_posix = rel_path.as_posix()
-    print(rel_posix)
     if (rel_posix == ".distignore"):
         return True
     
@@ -52,7 +51,7 @@ def should_ignore(path: Path, root: Path, patterns):
 
 def zip_folder(source_dir: str, output_zip: str):
     root = Path(source_dir).resolve()
-    root_name = root.name  # <-- имя корневой папки
+    root_name = root.name
     patterns = load_ignore_patterns(root)
 
     with zipfile.ZipFile(output_zip, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -61,7 +60,6 @@ def zip_folder(source_dir: str, output_zip: str):
                 if should_ignore(path, root, patterns):
                     continue
 
-                # Добавляем корневую папку в путь внутри zip
                 archive_path = Path(root_name) / path.relative_to(root)
                 zf.write(path, archive_path.as_posix())
 

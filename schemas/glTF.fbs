@@ -295,7 +295,7 @@ enum BufferViewTarget: uint {
 /// "description": "A view into a buffer generally representing a subset of the buffer."
 table BufferView {
 	/// "description": "The index of the buffer."
-	buffer: int = 0; //glTFid
+	buffer: int = -1; //glTFid
 
 	// "description": "The length of the bufferView in bytes."
 	// "minimum": 1
@@ -312,10 +312,6 @@ table BufferView {
 	/// "gltf_webgl": "`vertexAttribPointer()` stride parameter"
 	byteStride: uint;
 
-	/// "description": "The target that the GPU buffer should be bound to."
-	/// "gltf_webgl": "`bindBuffer()`"     
-    target: BufferViewTarget = ARRAY_BUFFER; // BufferViewTarget = UNIFORM_BUFFER;
-
 	/// The user-defined name of this object.
 	/// gltf_detailedDescription: The user-defined name of this object.  This is not necessarily unique, e.g., an accessor and a buffer could have the same name, or two accessors could even have the same name.
 	name: string;
@@ -325,6 +321,10 @@ table BufferView {
 
 	/// Application-specific data.
 	extras: [ubyte](flexbuffer);
+
+	/// "description": "The target that the GPU buffer should be bound to."
+	/// "gltf_webgl": "`bindBuffer()`"     
+    target: BufferViewTarget = ARRAY_BUFFER; // BufferViewTarget = UNIFORM_BUFFER;
 }
 
 ///----------------------------------------------------------------------------

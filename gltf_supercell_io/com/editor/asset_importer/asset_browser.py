@@ -29,3 +29,5 @@ class AssetBrowserProperties(bpy.types.PropertyGroup):
 
     assets: bpy.props.CollectionProperty(type=AssetBrowserItem)
     asset_index: bpy.props.IntProperty(default=0)
+
+    currently_importing: bpy.props.BoolProperty(default=False)

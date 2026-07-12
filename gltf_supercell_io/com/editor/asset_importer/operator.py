@@ -1,11 +1,10 @@
 import bpy
 import os
 from typing import Any, cast, TYPE_CHECKING
-from .helpers import tempdir
+from .helpers import get_version_sha, tempdir
 from .worker import RefreshRequest, update_asset_browser
 from ...net.asset_request import (
     AssetRequest,
-    AssetRequestServer,
     download_asset,
     list_versions,
 )
@@ -13,6 +12,7 @@ from pathlib import Path
 
 if TYPE_CHECKING:
     from .asset_browser import AssetBrowserProperties, AssetBrowserItem
+    from ....importer.ui import glTFSupercellImporterProperties
 
 
 class ASSETS_UL_list(bpy.types.UIList):
@@ -51,7 +51,7 @@ class ASSETS_OT_refresh(bpy.types.Operator):
 
         request = AssetRequest(
             search=f"{props.search} .glb$",
-            game_server=AssetRequestServer(props.game),
+            game_server=props.game,
             version=props.version if props.version else None,
         )
 
@@ -76,22 +76,14 @@ class ASSETS_OT_import(bpy.types.Operator):
         if not props.assets or not props.game or props.asset_index >= len(props.assets):
             return {"CANCELLED"}
 
+        props.currently_importing = True
         # Getting selected version hash
-        versions = list_versions(
-            AssetRequest(game_server=AssetRequestServer(props.game))
-        )
+        versions = list_versions(AssetRequest(game_server=props.game))
         if versions is None:
             self.report({"ERROR"}, "Failed to fetch versions")
             return {"CANCELLED"}
 
-        hash = next(
-            (
-                version["hash"]
-                for version in versions
-                if version["version"] == props.version
-            ),
-            "fallback",
-        )
+        hash = get_version_sha(props.version)
 
         # Getting item and creating temp path
         item = cast("AssetBrowserItem", props.assets[props.asset_index])
@@ -108,7 +100,16 @@ class ASSETS_OT_import(bpy.types.Operator):
             with open(filepath, "wb") as file:
                 file.write(data)
 
+        gltf_props = cast(
+            "glTFSupercellImporterProperties",
+            cast(Any, context.scene).glTFSupercellImporterProperties,
+        )
+        gltf_props.single_skeleton = False
+        if props.game == "BS":
+            gltf_props.shader_preset = "ScLegacyBrawlStarsShader"
         bpy.ops.import_scene.gltf(filepath=str(filepath))
+
+        props.currently_importing = False
         return {"FINISHED"}
 
 

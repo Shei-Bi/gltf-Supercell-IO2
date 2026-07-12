@@ -14,9 +14,10 @@ class AssetRequestType(StrEnum):
     ListServers = "listServers"
 
 
-class AssetRequestServer(StrEnum):
-    BrawlStars = "BS"
-    HayDay = "HD"
+@dataclass
+class Server:
+    name: str
+    codename: str
 
 
 @dataclass
@@ -28,7 +29,7 @@ class Version:
 @dataclass
 class AssetRequest:
     search: str = ""
-    game_server: AssetRequestServer = AssetRequestServer.BrawlStars
+    game_server: str = "BS"
     version: str | None = None
     count: int | None = None
     page: int | None = None
@@ -40,7 +41,7 @@ class AssetRequest:
             "|".join([string for string in self.search.split(" ") if string])
         )
 
-        request.append(self.game_server.value)
+        request.append(self.game_server)
         if self.version:
             request.append(f"v{self.version}")
 
@@ -57,6 +58,9 @@ class AssetRequest:
             params["index"] = self.page
 
         return params
+
+    def __str__(self):
+        return self.request
 
     def __eq__(self, other):
         if isinstance(other, AssetRequest):
@@ -80,7 +84,7 @@ class AssetRequest:
 
 _cached_versions: dict[AssetRequest, list[dict] | None] = {}
 _cached_assets: dict[AssetRequest, list[str] | None] = {}
-_cached_servers: list[dict] | None = None
+_cached_servers: list[Server] | None = None
 
 
 def list_assets(data: AssetRequest) -> list[str] | None:
@@ -133,12 +137,12 @@ def list_versions(data: AssetRequest) -> list[dict] | None:
     return result
 
 
-def list_servers() -> list[dict] | None:
+def list_servers() -> list[Server] | None:
     global _cached_servers
     if _cached_servers is not None:
         return _cached_servers
 
-    result = []
+    result: list[dict] = []
 
     try:
         response = requests.get(SERVERS_ENDPOINT_URL)
@@ -152,21 +156,38 @@ def list_servers() -> list[dict] | None:
     except Exception as e:
         print(f"Failed to fetch servers from {SERVERS_ENDPOINT_URL}\n{e}")
 
-    _cached_servers = result
-    return result
+    _cached_servers = [Server(**server) for server in result]
+    return _cached_servers
 
 
-def download_asset(request: str) -> bytes | None:
-    descriptor = AssetRequest(request, count=1, page=0)
+def download_asset_detailed(request: AssetRequest) -> bytes | None:
+    request.count = 1
+    request.page = 0
     result = requests.get(
         ASSETS_ENDPOINT_URL,
-        params={"type": AssetRequestType.Download.value} | descriptor.params,
+        params={"type": AssetRequestType.Download.value} | request.params,
     )
 
     if result.status_code == 200:
         return result.content
 
     return None
+
+
+def download_asset(request: str) -> bytes | None:
+    servers = list_servers()
+    if servers is None:
+        return None
+
+    result = None
+    for game in servers:
+        result = download_asset_detailed(
+            AssetRequest(search=request, game_server=game.codename)
+        )
+        if result is not None:
+            break
+
+    return result
 
 
 def clean_asset_fetch_cache():

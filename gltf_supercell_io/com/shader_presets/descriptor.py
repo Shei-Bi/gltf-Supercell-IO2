@@ -6,6 +6,7 @@ if TYPE_CHECKING:
     from ..shader.importer import ShaderImporter
     from ..shader.exporter import ShaderExporter
 
+
 class ShaderPresetDescriptor(ABC):
     shader_idname = ""
     shader_label = ""
@@ -14,7 +15,7 @@ class ShaderPresetDescriptor(ABC):
     @abstractmethod
     def import_shader(shader: ShaderImporter) -> None:
         pass
-    
+
     @staticmethod
     @abstractmethod
     def export_shader(shader: ShaderExporter) -> None:

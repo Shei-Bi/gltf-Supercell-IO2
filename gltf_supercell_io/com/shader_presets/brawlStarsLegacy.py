@@ -20,13 +20,13 @@ CONSTANT_MAP = {
     24: "COLORTRANSFORM_MUL",
 }
 
-COLOR_MAP = {
-    1: "ambient",
-    3: "diffuse",
-    6: "specular",
+ARRAY_MAP = {1: "ambient", 21: "clipPlane"}
+
+TEXTURE_MAP = {
     8: "colorize",
+    3: "diffuse",
     15: "emission",
-    21: "clipPlane",
+    6: "specular",
 }
 
 LIGHTMAP_MAP = {
@@ -51,24 +51,18 @@ class BrawlStarsLegacy(ShaderPresetDescriptor):
         for idx, key in CONSTANT_MAP.items():
             shader.set_constant_prop(key, idx)
 
-        for idx, key in COLOR_MAP.items():
+        for idx, key in ARRAY_MAP.items():
             shader.set_color_prop(key, idx)
-            shader.set_texture_prop(f"{key}Tex2D", idx)
+
+        for idx, key in TEXTURE_MAP.items():
+            shader.set_surface_color(key, f"{key}Tex2D", idx)
 
         for idx, key in LIGHTMAP_MAP.items():
-            shader.set_color_prop(key, idx)
-            node = shader.set_texture_prop(f"{key}Tex2D", idx)
+            shader.set_surface_color(
+                key, f"{key}Tex2D", idx, vector=light_vector, has_color=False
+            )
 
-            # Optional lightmap vector for import process
-            if (
-                light_vector is not None
-                and node is not None
-                and shader.material.node_tree is not None
-            ):
-                shader.material.node_tree.links.new(node.inputs[0], light_vector)
-
-        shader.set_float_prop("opacity", OPACITY)
-        shader.set_texture_prop("opacityTex2D", OPACITY)
+        shader.set_surface_color("opacity", "opacityTex2D", OPACITY, defaultValue=1.0)
         shader.set_bool_prop("enableStencilTex", STENCIL_ENABLE)
         shader.set_texture_prop("stencilTex2D", STENCIL_TEXTURE)
 

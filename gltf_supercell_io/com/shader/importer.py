@@ -4,6 +4,7 @@ import bpy
 from pathlib import Path
 from os.path import join, exists
 from bpy.types import (
+    NodeSocket,
     ShaderNodeTexImage,
     ShaderNodeOutputMaterial,
     Image,
@@ -12,7 +13,7 @@ from bpy.types import (
 )
 from io_scene_gltf2.io.imp.gltf2_io_gltf import glTFImporter
 from io_scene_gltf2.io.com.gltf2_io import Image as glImage
-from typing import Tuple, Dict
+from typing import Optional, Tuple, Dict
 from ..materials import ScShaderMaterial, ScBlendMode
 from ..materials.variables import (
     ShaderFloatVectorProperty,
@@ -24,7 +25,7 @@ from ..materials.variables import (
 from ..utilities import ShaderUtils
 from .loader import LibraryLoader
 from ...preferences import get_prefs
-from ..net import texture_loader, asset_request
+from ..net import texture_loader
 
 from typing import TYPE_CHECKING, Type
 
@@ -138,6 +139,9 @@ class ShaderImporter(ShaderUtils):
 
         if self.is_bool_socket(socket, name):
             socket.default_value = self.sc_material.has_constant(name)
+            return True
+
+        return False
 
     def load_texture_from_bytes(self, name: str, buffer: bytes):
         img = bpy.data.images.new(name, width=1, height=1)
@@ -260,7 +264,7 @@ class ShaderImporter(ShaderUtils):
         cache_image(image)
         return image
 
-    def set_texture_prop(self, name: str, index: int):
+    def _set_texture_prop_internal(self, name: str, index: int):
         prop = self.sc_material.get_property(name, ShaderTextureProperty)
 
         if prop is None:
@@ -296,29 +300,52 @@ class ShaderImporter(ShaderUtils):
             node = self.image_cache[prop.path] = texture
 
         self.tree.links.new(self.shader.inputs[index], node.outputs[0])  # type: ignore
-
         return node
+
+    def set_texture_prop(self, name: str, index: int):
+        return self._set_texture_prop_internal(name, index) is not None
 
     def set_color_prop(self, name: str, index: int):
         prop = self.sc_material.get_property(name, ShaderFloatVectorProperty)
 
         if prop is None:
-            return
+            return False
 
         socket = self.shader.inputs[index]
         if self.is_color_socket(socket, name):
             socket.default_value = prop.vector
+            return True
+
+        return False
+
+    def set_surface_color(
+        self,
+        name: str,
+        tex_name: str,
+        index: int,
+        vector: Optional[NodeSocket] = None,
+        **kwargs,
+    ):
+        node = self._set_texture_prop_internal(tex_name, index)
+        if (
+            vector is not None
+            and node is not None
+            and self.material.node_tree is not None
+        ):
+            self.material.node_tree.links.new(node.inputs[0], vector)
+
+        return self.set_color_prop(name, index) or node is not None
 
     def set_float_prop(self, name: str, index: int):
         socket = self.shader.inputs[index]
         if not self.is_float_socket(socket, name):
-            return
+            return False
 
         float_prop = self.sc_material.get_property(name, ShaderFloatProperty)
 
         if float_prop:
             socket.default_value = float_prop.number
-            return
+            return False
 
         # Sometimes floats are saved as color, as if after conversion or something
         # Bruh, based supercell devs
@@ -327,15 +354,20 @@ class ShaderImporter(ShaderUtils):
         if vector_prop and len(vector_prop.value):
             socket.default_value = vector_prop.value[0]
 
+        return True
+
     def set_bool_prop(self, name: str, index: int):
         prop = self.sc_material.get_property(name, ShaderBooleanProperty)
 
         if prop is None:
-            return
+            return False
 
         socket = self.shader.inputs[index]
         if self.is_bool_socket(socket, name):
             socket.default_value = prop.status
+            return True
+
+        return False
 
     def setup_shader(self):
         node = LibraryLoader.instantiate_shader(self.tree, self.preset.shader_idname)

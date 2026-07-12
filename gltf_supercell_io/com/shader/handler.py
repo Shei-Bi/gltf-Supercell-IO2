@@ -8,7 +8,7 @@ from pathlib import Path
 def shader_linkage_handler(dummy):
     for lib in bpy.data.libraries:
         path = Path(lib.filepath)
-        if (path.name == LibraryLoader.LibraryName):
-            if (not path.exists()):
+        if path.name == LibraryLoader.LibraryName:
+            if not path.exists():
                 lib.filepath = str(LibraryLoader.LibraryPath)
                 lib.reload()

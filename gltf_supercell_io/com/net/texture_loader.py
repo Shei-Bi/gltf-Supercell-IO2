@@ -69,7 +69,7 @@ def _convert_texture_cached(name: str, game: str, version: str) -> bytes | None:
     temp_texture_path = os.path.join(tempdir, hash, name)
     os.makedirs(os.path.dirname(temp_texture_path), exist_ok=True)
     try:
-        if os.path.exists(temp_texture_path):
+        if os.path.isfile(temp_texture_path):
             return open(temp_texture_path, "rb").read()
     except Exception as e:
         print(f'Failed to read texture cache at "{temp_texture_path}"\n{e}')
@@ -98,7 +98,7 @@ def download_texture(name: str) -> bytes | None:
     os.makedirs(os.path.dirname(temp_texture_path), exist_ok=True)
 
     try:
-        if os.path.exists(temp_texture_path):
+        if os.path.isfile(temp_texture_path):
             return open(temp_texture_path, "rb").read()
     except Exception as e:
         print(f'Failed to read texture cache at "{temp_texture_path}"\n{e}')
@@ -129,7 +129,7 @@ def convert_user_texture(name: str, buffer: bytes) -> bytes | None:
     temp_texture_path = os.path.join(tempdir, texture_hash.hexdigest())
 
     try:
-        if os.path.exists(temp_texture_path):
+        if os.path.isfile(temp_texture_path):
             return open(temp_texture_path, "rb").read()
     except Exception as e:
         print(f'Failed to read texture cache at "{temp_texture_path}"\n{e}')

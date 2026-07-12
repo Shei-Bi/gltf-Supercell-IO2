@@ -1,6 +1,10 @@
 from bpy.types import NodeSocket
 from .descriptor import ShaderPresetDescriptor
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..shader.importer import ShaderImporter
+    from ..shader.exporter import ShaderExporter
 
 CONSTANT_MAP = {
     0: "AMBIENT",
@@ -13,7 +17,7 @@ CONSTANT_MAP = {
     16: "STENCIL",
     20: "CLIP_PLANE",
     22: "COLORTRANSFORM_ADD",  # Not sure about that, but it was smth like that
-    24: "COLORTRANSFORM_MUL"
+    24: "COLORTRANSFORM_MUL",
 }
 
 COLOR_MAP = {
@@ -22,7 +26,7 @@ COLOR_MAP = {
     6: "specular",
     8: "colorize",
     15: "emission",
-    21: "clipPlane"
+    21: "clipPlane",
 }
 
 LIGHTMAP_MAP = {
@@ -40,7 +44,10 @@ class BrawlStarsLegacy(ShaderPresetDescriptor):
     shader_label = "Brawl Stars Legacy Shader"
 
     @staticmethod
-    def setup_props(shader, light_vector: Optional[NodeSocket] = None):
+    def setup_props(
+        shader: "ShaderImporter | ShaderExporter",
+        light_vector: Optional[NodeSocket] = None,
+    ):
         for idx, key in CONSTANT_MAP.items():
             shader.set_constant_prop(key, idx)
 
@@ -50,15 +57,15 @@ class BrawlStarsLegacy(ShaderPresetDescriptor):
 
         for idx, key in LIGHTMAP_MAP.items():
             shader.set_color_prop(key, idx)
-            node = shader.set_texture_prop(
-                f"{key}Tex2D", idx
-            )
+            node = shader.set_texture_prop(f"{key}Tex2D", idx)
 
             # Optional lightmap vector for import process
-            if (light_vector is not None and node is not None):
-                shader.material.node_tree.links.new(
-                    node.inputs[0], light_vector
-                )
+            if (
+                light_vector is not None
+                and node is not None
+                and shader.material.node_tree is not None
+            ):
+                shader.material.node_tree.links.new(node.inputs[0], light_vector)
 
         shader.set_float_prop("opacity", OPACITY)
         shader.set_texture_prop("opacityTex2D", OPACITY)
@@ -66,13 +73,13 @@ class BrawlStarsLegacy(ShaderPresetDescriptor):
         shader.set_texture_prop("stencilTex2D", STENCIL_TEXTURE)
 
     @staticmethod
-    def import_shader(shader):
+    def import_shader(shader: "ShaderImporter"):
         lighting_node = shader.instantiate_utility("ScLightmapUV", "Lightmaps")
         lighting_vector = lighting_node.outputs[0]
 
         BrawlStarsLegacy.setup_props(shader, lighting_vector)
 
     @staticmethod
-    def export_shader(shader):
+    def export_shader(shader: "ShaderExporter"):
         shader.set_blend_from_opacity_socket(OPACITY)
         BrawlStarsLegacy.setup_props(shader)

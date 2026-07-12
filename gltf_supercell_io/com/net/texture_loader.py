@@ -8,7 +8,7 @@ from pathlib import Path
 from io import BytesIO
 
 from ..editor.asset_importer.helpers import get_version_sha
-from .asset_request import AssetRequest, download_asset, download_asset_detailed
+from .asset_request import AssetRequest, download_asset_detailed
 from neko_web_api_client import Client
 from neko_web_api_client.api.assets import post_v1_texture_png
 from neko_web_api_client.api.default import post_v1_cdn

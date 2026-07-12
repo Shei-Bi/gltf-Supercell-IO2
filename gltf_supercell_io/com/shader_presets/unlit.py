@@ -1,5 +1,11 @@
+from typing import TYPE_CHECKING
+
 from .descriptor import ShaderPresetDescriptor
-from ..shader.importer import ShaderImporter
+
+if TYPE_CHECKING:
+    from ..shader.importer import ShaderImporter
+    from ..shader.exporter import ShaderExporter
+
 
 # Unlit shader socket map
 # Its really simple, so i think we can hold it as simple module constants
@@ -15,33 +21,33 @@ class UnlitPreset(ShaderPresetDescriptor):
     shader_idname = "ScUnlitShader"
     shader_label = "Unlit Shader"
 
-    @staticmethod
-    def setup_props(shader):
-        UnlitPreset.setup_diffuse(shader)
-        UnlitPreset.setup_opacity(shader)
-        UnlitPreset.setup_clipping(shader)
-
     @staticmethod  # Need this for IDE to work correctly
-    def import_shader(shader):
+    def import_shader(shader: "ShaderImporter"):
         UnlitPreset.setup_props(shader)
 
     @staticmethod
-    def export_shader(shader):
+    def export_shader(shader: "ShaderExporter"):
         shader.set_blend_from_opacity_socket(OPACITY)
         UnlitPreset.setup_props(shader)
 
     @staticmethod
-    def setup_diffuse(shader: ShaderImporter):
+    def setup_props(shader: "ShaderImporter | ShaderExporter"):
+        UnlitPreset.setup_diffuse(shader)
+        UnlitPreset.setup_opacity(shader)
+        UnlitPreset.setup_clipping(shader)
+
+    @staticmethod
+    def setup_diffuse(shader: "ShaderImporter | ShaderExporter"):
         shader.set_constant_prop("DIFFUSE", DIFFUSE_ENABLED)
         shader.set_texture_prop("diffuseTex2D", DIFFUSE_TEX)
         shader.set_color_prop("diffuse", DIFFUSE_TEX)
 
     @staticmethod
-    def setup_opacity(shader: ShaderImporter):
+    def setup_opacity(shader: "ShaderImporter | ShaderExporter"):
         shader.set_constant_prop("OPACITY", OPACITY_ENABLED)
         shader.set_float_prop("opacity", OPACITY)
 
     @staticmethod
-    def setup_clipping(shader: ShaderImporter):
+    def setup_clipping(shader: "ShaderImporter | ShaderExporter"):
         shader.set_constant_prop("CLIP_PLANE", CLIP_PLANE_ENABLED)
         shader.set_color_prop("clipPlane", CLIP_PLANE)

@@ -334,7 +334,12 @@ class ShaderImporter(ShaderUtils):
         ):
             self.material.node_tree.links.new(node.inputs[0], vector)
 
-        return self.set_color_prop(name, index) or node is not None
+        valid = self.set_color_prop(name, index)
+        # Trying to set as float
+        if not valid:
+            valid = self.set_float_prop(name, index)
+
+        return valid or node is not None
 
     def set_float_prop(self, name: str, index: int):
         socket = self.shader.inputs[index]

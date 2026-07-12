@@ -6,6 +6,7 @@ from .worker import RefreshRequest, update_asset_browser
 from ...net.asset_request import (
     AssetRequest,
     download_asset,
+    download_asset_detailed,
     list_versions,
 )
 from pathlib import Path
@@ -90,7 +91,11 @@ class ASSETS_OT_import(bpy.types.Operator):
         filepath: Path = Path(tempdir) / hash / item.path
         if not os.path.exists(item.path):
             # Downloading file
-            data = download_asset(item.path)
+            data = download_asset_detailed(
+                AssetRequest(
+                    search=item.path, game_server=props.game, version=props.version
+                )
+            )
             if data is None:
                 self.report({"ERROR"}, "Failed to download file")
                 return {"CANCELLED"}

@@ -109,7 +109,7 @@ class ASSETS_OT_import(bpy.types.Operator):
             "glTFSupercellImporterProperties",
             cast(Any, context.scene).glTFSupercellImporterProperties,
         )
-        gltf_props.single_skeleton = False
+        # gltf_props.single_skeleton = False
         if props.game == "BS":
             gltf_props.shader_preset = "ScLegacyBrawlStarsShader"
         bpy.ops.import_scene.gltf(filepath=str(filepath))

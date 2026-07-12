@@ -55,13 +55,13 @@ class ShaderExporter:
 
         render_method = self.material.surface_render_method
         if has_alpha and render_method == "DITHERED":
-            self.sc_material.blend_mode = ScBlendMode.Hashed
+            self.sc_material.blend_mode = ScBlendMode.ADDITIVE
         elif has_alpha and render_method == "BLENDED":
-            self.sc_material.blend_mode = ScBlendMode.Blend
+            self.sc_material.blend_mode = ScBlendMode.PREMULTIPLIED
         elif render_method == "BLENDED":
-            self.sc_material.blend_mode = ScBlendMode.Clip
+            self.sc_material.blend_mode = ScBlendMode.MULTIPLY
         else:
-            self.sc_material.blend_mode = ScBlendMode.Opaque
+            self.sc_material.blend_mode = ScBlendMode.OPAQUE
 
     def set_constant_prop(self, name: str, index: int):
         """Set the constant based on the boolean socket"""
@@ -261,7 +261,7 @@ class ShaderExporter:
 
     def export_modifiers(self):
         if "ScMultiplyModifier" in self.modifiers:
-            self.sc_material.blend_mode = ScBlendMode.Multiply
+            self.sc_material.blend_mode = ScBlendMode.SCREEN # TODO: Rename modifier and add support for the rest of blend modes
 
     def export_material(self):
         """Export the material to dictionary"""

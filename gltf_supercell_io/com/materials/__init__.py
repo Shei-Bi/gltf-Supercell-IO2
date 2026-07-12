@@ -7,12 +7,13 @@ T = TypeVar('T', bound='ShaderProperty')
 
 
 class ScBlendMode(IntEnum):
-    Unk = 5  # Seaweed?
-    Opaque = 4
-    Multiply = 3
-    Clip = 2  # Not sure about that
-    Hashed = 1  # And this too
-    Blend = 0
+    ALPHA_ADDITIVE = 6
+    ALPHA = 5
+    OPAQUE = 4
+    SCREEN = 3
+    MULTIPLY = 2
+    ADDITIVE = 1
+    PREMULTIPLIED = 0
 
 
 class ScShaderMaterial:
@@ -21,7 +22,7 @@ class ScShaderMaterial:
         self.name = ""
 
         # Index of blending mode
-        self.blend_mode = ScBlendMode.Opaque
+        self.blend_mode = ScBlendMode.OPAQUE
 
         # Array of string which describes which shader features material should use
         self._constants: List[str] = []

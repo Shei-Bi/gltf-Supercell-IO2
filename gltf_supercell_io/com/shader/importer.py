@@ -108,7 +108,7 @@ class ShaderImporter(ShaderUtils):
     def setup_modifiers(self):
         result = []
 
-        if self.sc_material.blend_mode == ScBlendMode.Multiply:
+        if self.sc_material.blend_mode == ScBlendMode.SCREEN:
             result.append(self.setup_modifier("ScMultiplyModifier", "Multiply"))
 
         if result:
@@ -117,7 +117,7 @@ class ShaderImporter(ShaderUtils):
         return None
 
     def setup_blending(self):
-        if self.sc_material.blend_mode == ScBlendMode.Opaque:
+        if self.sc_material.blend_mode == ScBlendMode.OPAQUE:
             self.material.surface_render_method = "DITHERED"
         else:
             self.material.surface_render_method = "BLENDED"

@@ -66,7 +66,7 @@ def _convert_texture_cached(name: str, game: str, version: str) -> bytes | None:
     global client
 
     hash = get_version_sha(version)
-    temp_texture_path = os.path.join(tempdir, hash, name)
+    temp_texture_path = os.path.join(tempdir, hash, name + ".png")
     os.makedirs(os.path.dirname(temp_texture_path), exist_ok=True)
     try:
         if os.path.isfile(temp_texture_path):
@@ -88,7 +88,7 @@ def _convert_texture_cached(name: str, game: str, version: str) -> bytes | None:
     return _handle_response(response, temp_texture_path)
 
 
-def download_texture(name: str) -> bytes | None:
+def download_texture(name: str) -> tuple[str, bytes] | None:
     props = cast(
         "AssetBrowserProperties", cast(Any, bpy.context.scene).sc_asset_browser
     )
@@ -99,7 +99,7 @@ def download_texture(name: str) -> bytes | None:
 
     try:
         if os.path.isfile(temp_texture_path):
-            return open(temp_texture_path, "rb").read()
+            return (temp_texture_path, open(temp_texture_path, "rb").read())
     except Exception as e:
         print(f'Failed to read texture cache at "{temp_texture_path}"\n{e}')
 
@@ -109,7 +109,10 @@ def download_texture(name: str) -> bytes | None:
         with open(temp_texture_path, "wb") as f:
             f.write(result)
 
-    return result
+    if result is not None:
+        return (temp_texture_path, result)
+
+    return None
 
 
 def convert_texture(name: str) -> bytes | None:

@@ -1,0 +1,3 @@
+library/build
+**/*.dll
+**/*.so

@@ -1,6 +1,6 @@
 from __future__ import annotations
-
 import bpy
+import numpy as np
 from pathlib import Path
 from os.path import join, exists
 from bpy.types import (
@@ -13,7 +13,7 @@ from bpy.types import (
 )
 from io_scene_gltf2.io.imp.gltf2_io_gltf import glTFImporter
 from io_scene_gltf2.io.com.gltf2_io import Image as glImage
-from typing import Optional, Tuple, Dict
+from typing import Callable, Optional, Tuple, Dict
 from ..materials import ScShaderMaterial, ScBlendMode
 from ..materials.variables import (
     ShaderFloatVectorProperty,
@@ -26,8 +26,8 @@ from ..utilities import ShaderUtils
 from .loader import LibraryLoader
 from ...preferences import get_prefs
 from ..net import texture_loader
-
 from typing import TYPE_CHECKING, Type
+from ..external.image_converter import load_image_converter
 
 if TYPE_CHECKING:
     from ..shader_presets import ShaderPresetDescriptor
@@ -143,65 +143,118 @@ class ShaderImporter(ShaderUtils):
 
         return False
 
-    def load_texture_from_bytes(self, name: str, buffer: bytes):
+    def load_texture_from_png(self, name: str, buffer: bytes):
         img = bpy.data.images.new(name, width=1, height=1)
         img.source = "FILE"
         img.pack(data=buffer, data_len=len(buffer))
         img.reload()
         return img
 
+    def load_texture_from_raw(self, name: str, width: int, height, buffer: bytes):
+        array = np.frombuffer(buffer, dtype=np.uint8)
+        array = array.reshape((height, width, 4))
+        array = np.flipud(array)
+
+        pixels = array.astype(np.float32) / 255.0
+        img = bpy.data.images.new(name, width=width, height=height, alpha=True)
+        img.pixels.foreach_set(pixels.ravel())  # type: ignore
+        img.update()
+        img.pack()
+        return img
+
+    def load_compressed_texture(self, path: Path):
+        image_converter = load_image_converter()
+        loader: Dict[str, Callable[..., tuple[bytes, int, int]]] = {
+            ".sctx": image_converter.decode_sctx  # type: ignore
+        }
+
+        try:
+            buffer, width, height = loader[str(path.suffix)](path)
+            return self.load_texture_from_raw(str(path), width, height, buffer)
+        except Exception as e:
+            print(e)
+
     def try_load_texture_image(self, path: Path) -> Image | None:
-        lookups = [self.basepath]
+        image_converter = load_image_converter()
+
+        IMAGE_CONVERTER_EXTENSIONS: list[str] = (
+            []
+            if image_converter is None
+            else image_converter.SUPPORTED_CONVERTER_EXTENSIONS
+        )
+
+        lookups = ["", self.basepath]
         prefs = get_prefs()
         if prefs:
             lookups += [string.value for string in prefs.texture_lookup]
 
         for extension in IMAGE_EXTENSIONS:
-            paths = []
+            paths: list[Path] = []
             for lookup in lookups:
                 paths += [
                     # Tweak for brawl stars, trying to use highres textures preferably
-                    join(lookup, "highres", path.with_suffix(extension)),  # Default
-                    join(
-                        lookup, "highres", Path(path.stem).with_suffix(extension)
-                    ),  # Stem
+                    Path(lookup)
+                    / path.parent
+                    / "background"
+                    / Path(path.stem)
+                    .with_name(path.stem + "_highres")
+                    .with_suffix(extension),  # Default
+                    Path(lookup)
+                    / Path(path.stem + "_highres").with_suffix(extension),  # Stem
                     # Default path
-                    join(lookup, path.with_suffix(extension)),
-                    path.with_suffix(extension),
+                    Path(lookup) / path.with_suffix(extension),
                     # Using path stem
-                    join(lookup, Path(path.stem).with_suffix(extension)),
-                    Path(path.stem).with_suffix(extension),
+                    Path(lookup) / Path(path.stem).with_suffix(extension),
                 ]
 
             for maybe_path in paths:
                 # Decoding existing on user device textures
                 if exists(maybe_path):
-                    if (
-                        extension not in NATIVE_IMAGE_EXTENSIONS
-                        and extension in SUPPORTED_NEKO_EXTENSIONS
-                    ):
-                        data = texture_loader.convert_user_texture(
-                            str(path), open(maybe_path, "rb").read()
-                        )
-                        if data:
-                            return self.load_texture_from_bytes(str(path), data)
+                    if extension not in NATIVE_IMAGE_EXTENSIONS:
+                        if extension in IMAGE_CONVERTER_EXTENSIONS:
+                            data = self.load_compressed_texture(maybe_path)
+                            if data is not None:
+                                return data
 
-                    return bpy.data.images.load(maybe_path)
+                        if extension in SUPPORTED_NEKO_EXTENSIONS:
+                            data = texture_loader.convert_user_texture(
+                                str(path), open(maybe_path, "rb").read()
+                            )
+
+                            if data is not None:
+                                return self.load_texture_from_png(str(path), data)
+
+                    return bpy.data.images.load(str(maybe_path))
 
                 # Execute network operations with original extension only
                 if path.suffix != extension:
                     continue
 
                 # Fetching missing textures using AssetRequest
-                if extension in NATIVE_IMAGE_EXTENSIONS:
-                    data = texture_loader.download_texture(str(path))
-                    if data:
-                        return self.load_texture_from_bytes(str(path), data)
+                if (
+                    extension in NATIVE_IMAGE_EXTENSIONS
+                    or extension in IMAGE_CONVERTER_EXTENSIONS
+                ):
+                    result: Tuple[str, bytes] | None = None
+                    for maybe_path in paths:
+                        result = texture_loader.download_texture(maybe_path.as_posix())
+                        if result is not None:
+                            break
+
+                    if result is not None:
+                        texture_path, data = result
+                        if extension in IMAGE_CONVERTER_EXTENSIONS:
+                            image = self.load_compressed_texture(Path(texture_path))
+                            if image:
+                                return image
+                        else:
+                            if data:
+                                return self.load_texture_from_png(str(path), data)
 
                 # Trying to import textures using Neko (if using asset browser)
                 data = texture_loader.convert_texture(str(path))
                 if data:
-                    return self.load_texture_from_bytes(str(path), data)
+                    return self.load_texture_from_png(str(path), data)
 
     def load_texture_image(
         self, prop: ShaderTextureProperty, preserve_path: bool = False

@@ -3,6 +3,10 @@ cmake_minimum_required(VERSION 3.22)
 # workspace
 project(texture-loader)
 
+# Fix MSVC toolset toolset incompatibility
+# Which causes crash for some users
+add_compile_definitions(_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTION)
+
 # includes
 include(FetchContent)
 

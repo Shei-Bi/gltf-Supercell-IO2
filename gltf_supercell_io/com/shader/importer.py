@@ -32,6 +32,7 @@ from ..external.image_converter import load_image_converter
 if TYPE_CHECKING:
     from ..shader_presets import ShaderPresetDescriptor
 
+# An array of image extensions that can be loaded by blender
 NATIVE_IMAGE_EXTENSIONS = [
     ".jpg",
     ".jpeg",
@@ -46,11 +47,17 @@ NATIVE_IMAGE_EXTENSIONS = [
     ".hdr",
 ]
 
-COMPRESSED_IMAGE_EXTENSIONS = [".ktx", ".sctx", ".pvr"]
+# An array of compressed GPU textures supported by Titan but not supported by Blender
+COMPRESSED_TITAN_IMAGE_EXTENSIONS = [".sctx", ".ktx", ".pvr"]
 
+# An array of texture extensions supported by neko api
 SUPPORTED_NEKO_EXTENSIONS = [".sctx"]
 
-IMAGE_EXTENSIONS = NATIVE_IMAGE_EXTENSIONS + COMPRESSED_IMAGE_EXTENSIONS
+# An array of all valid texture extensions
+IMAGE_EXTENSIONS = NATIVE_IMAGE_EXTENSIONS + COMPRESSED_TITAN_IMAGE_EXTENSIONS
+
+# An array of image extensions that can be loaded by Blender and supported by Titan
+NATIVE_TITAN_IMAGE_EXTENSION = [".png"] + COMPRESSED_TITAN_IMAGE_EXTENSIONS
 
 
 class ShaderImporter(ShaderUtils):
@@ -143,7 +150,7 @@ class ShaderImporter(ShaderUtils):
 
         return False
 
-    def load_texture_from_png(self, name: str, buffer: bytes):
+    def load_texture_from_image(self, name: str, buffer: bytes):
         img = bpy.data.images.new(name, width=1, height=1)
         img.source = "FILE"
         img.pack(data=buffer, data_len=len(buffer))
@@ -207,54 +214,69 @@ class ShaderImporter(ShaderUtils):
                     Path(lookup) / Path(path.stem).with_suffix(extension),
                 ]
 
+            # Decoding existing on user device textures
             for maybe_path in paths:
-                # Decoding existing on user device textures
-                if exists(maybe_path):
-                    if extension not in NATIVE_IMAGE_EXTENSIONS:
-                        if extension in IMAGE_CONVERTER_EXTENSIONS:
-                            data = self.load_compressed_texture(maybe_path)
-                            if data is not None:
-                                return data
-
-                        if extension in SUPPORTED_NEKO_EXTENSIONS:
-                            data = texture_loader.convert_user_texture(
-                                str(path), open(maybe_path, "rb").read()
-                            )
-
-                            if data is not None:
-                                return self.load_texture_from_png(str(path), data)
-
-                    return bpy.data.images.load(str(maybe_path))
-
-                # Execute network operations with original extension only
-                if path.suffix != extension:
+                if not exists(maybe_path):
                     continue
 
-                # Fetching missing textures using AssetRequest
+                # Loading blender supported image
+                if extension in NATIVE_IMAGE_EXTENSIONS:
+                    return bpy.data.images.load(str(maybe_path))
+
+                # Load using image converter
+                if extension in IMAGE_CONVERTER_EXTENSIONS:
+                    data = self.load_compressed_texture(maybe_path)
+                    if data is not None:
+                        return data
+
+                # Converting user texture using neko api
+                if extension in SUPPORTED_NEKO_EXTENSIONS:
+                    data = texture_loader.convert_user_texture(
+                        str(path), open(maybe_path, "rb").read()
+                    )
+
+                    if data is not None:
+                        return self.load_texture_from_image(str(path), data)
+
+            # Trying to fetch raw textures from neko asset api
+            for maybe_path in paths:
+                # Iterate only by titan supported extensions
+                # Using just NATIVE_IMAGE_EXTENSIONS creates a lot of
+                # network requests just to guess texture name
+                if extension not in NATIVE_TITAN_IMAGE_EXTENSION:
+                    break
+
+                # Check if blender can load texture with that extension
+                # Or image converter can decode it locally
                 if (
-                    extension in NATIVE_IMAGE_EXTENSIONS
-                    or extension in IMAGE_CONVERTER_EXTENSIONS
+                    extension not in NATIVE_IMAGE_EXTENSIONS
+                    and extension not in IMAGE_CONVERTER_EXTENSIONS
                 ):
-                    result: Tuple[str, bytes] | None = None
-                    for maybe_path in paths:
-                        result = texture_loader.download_texture(maybe_path.as_posix())
-                        if result is not None:
-                            break
+                    continue
 
-                    if result is not None:
-                        texture_path, data = result
-                        if extension in IMAGE_CONVERTER_EXTENSIONS:
-                            image = self.load_compressed_texture(Path(texture_path))
-                            if image:
-                                return image
-                        else:
-                            if data:
-                                return self.load_texture_from_png(str(path), data)
+                result = texture_loader.download_raw_texture(maybe_path.as_posix())
+                if result is None:
+                    continue
 
-                # Trying to import textures using Neko (if using asset browser)
-                data = texture_loader.convert_texture(str(path))
+                texture_path, data = result
+
+                # Decoding with image converter
+                if extension in IMAGE_CONVERTER_EXTENSIONS:
+                    return self.load_compressed_texture(Path(texture_path))
+
+                # Loading from cached native image
                 if data:
-                    return self.load_texture_from_png(str(path), data)
+                    return self.load_texture_from_image(str(path), data)
+
+            # Trying to decode textures using neko api and its asset database
+            # Works only for asset browser
+            for maybe_path in paths:
+                if extension not in SUPPORTED_NEKO_EXTENSIONS:
+                    continue
+
+                data = texture_loader.convert_texture(str(maybe_path.as_posix()))
+                if data:
+                    return self.load_texture_from_image(str(path), data)
 
     def load_texture_image(
         self, prop: ShaderTextureProperty, preserve_path: bool = False

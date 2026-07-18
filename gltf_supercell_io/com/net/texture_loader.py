@@ -88,7 +88,7 @@ def _convert_texture_cached(name: str, game: str, version: str) -> bytes | None:
     return _handle_response(response, temp_texture_path)
 
 
-def download_texture(name: str) -> tuple[str, bytes] | None:
+def download_raw_texture(name: str) -> tuple[str, bytes] | None:
     props = cast(
         "AssetBrowserProperties", cast(Any, bpy.context.scene).sc_asset_browser
     )

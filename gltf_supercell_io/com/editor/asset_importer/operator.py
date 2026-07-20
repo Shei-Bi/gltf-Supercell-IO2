@@ -5,7 +5,6 @@ from .helpers import get_version_sha, tempdir
 from .worker import RefreshRequest, update_asset_browser
 from ...net.asset_request import (
     AssetRequest,
-    download_asset,
     download_asset_detailed,
     list_versions,
 )

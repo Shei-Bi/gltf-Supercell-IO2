@@ -17,7 +17,7 @@ from ..com.shader.importer import ShaderImporter
 from ..com.animation import OdinAnimation
 
 from io_scene_gltf2.io.com.gltf2_io_extensions import Extension
-from io_scene_gltf2.io.imp.gltf2_io_gltf import glTFImporter, ImportError
+from io_scene_gltf2.io.imp.gltf2_io_gltf import ImportError
 from io_scene_gltf2.io.com.gltf2_io import (
     Accessor,
     Material,
@@ -37,9 +37,12 @@ from io_scene_gltf2.blender.imp.animation_utils import (
 from io_scene_gltf2.blender.imp.material import BlenderMaterial
 from .ui import glTFSupercellImporterProperties
 
-from typing import List, Dict, Any
+from typing import TYPE_CHECKING, List, Dict, Any
 from pathlib import Path
 from mathutils import Vector
+
+if TYPE_CHECKING:
+    from io_scene_gltf2.io.imp.gltf2_io_gltf import glTFImporter
 
 
 class glTF2ImportUserExtension:
@@ -52,7 +55,7 @@ class glTF2ImportUserExtension:
             Extension(name=glTF_material_extension_name, extension={}, required=False),
         ]
 
-    def valid_gltf(self, gltf: glTFImporter):
+    def valid_gltf(self, gltf: "glTFImporter"):
         """Returns True if gltf is valid Supercell glTF and is subject to further processing"""
         required = gltf.data.extensions_required or []
         used = gltf.data.extensions_used or []
@@ -70,7 +73,7 @@ class glTF2ImportUserExtension:
 
         return has_extension or has_shader
 
-    def process_accessors(self, gltf: glTFImporter):
+    def process_accessors(self, gltf: "glTFImporter"):
         """Supercell uses special component types for some accessors to optimize gpu memory usage,
         which is not standard and needs to be converted to normal here"""
         # Exclusive Accessor Component Types
@@ -82,7 +85,7 @@ class glTF2ImportUserExtension:
         for accessor in accessors:
             accessor.component_type = accessor.component_type & 0x0000FFFF
 
-    def get_extension_descriptor(self, gltf: glTFImporter) -> dict | None:
+    def get_extension_descriptor(self, gltf: "glTFImporter") -> dict | None:
         """Returns SC_odin_format extension descriptor, if exists, otherwise returns None"""
         extensions: dict = gltf.data.extensions
         if extensions is None:
@@ -90,7 +93,7 @@ class glTF2ImportUserExtension:
 
         return extensions.get(glTF_extension_name, None)
 
-    def move_materials(self, gltf: glTFImporter):
+    def move_materials(self, gltf: "glTFImporter"):
         """Supercell stores their materials in extensions,
         so we need to move them to the main materials list if there is a need"""
         descriptor = self.get_extension_descriptor(gltf)
@@ -106,7 +109,7 @@ class glTF2ImportUserExtension:
             for material in materials
         ]
 
-    def process_nodes_extension(self, gltf: glTFImporter):
+    def process_nodes_extension(self, gltf: "glTFImporter"):
         """Repairs gltf children relation indexing based on classic parent indexing stored in node extensions"""
         nodes: List[Node] = gltf.data.nodes or []
 
@@ -132,7 +135,7 @@ class glTF2ImportUserExtension:
         for idx, children in childrens.items():
             nodes[idx].children = children
 
-    def do_final_fixups(self, gltf: glTFImporter):
+    def do_final_fixups(self, gltf: "glTFImporter"):
         """Very often Supercell glTF files have missing fields that are required by the importer, this function adds them back"""
 
         root_nodes = []
@@ -167,7 +170,11 @@ class glTF2ImportUserExtension:
             len(gltf.data.meshes or []) != 0 and len(gltf.data.animations or []) != 0
         )
         is_static_scene = len(gltf.data.animations or []) == 0 and len(skins) == 0
-        if self.properties.single_skeleton and not is_embedded_animation and not is_static_scene:
+        if (
+            self.properties.single_skeleton
+            and not is_embedded_animation
+            and not is_static_scene
+        ):
             # Most of animations doesn't have actual skin
             # We should create placeholder one, so blender could process it properly
             if len(skins) == 0:
@@ -202,7 +209,7 @@ class glTF2ImportUserExtension:
 
         gltf.data.meshes = gltf.data.meshes or []
 
-    def setup_settings(self, gltf: glTFImporter):
+    def setup_settings(self, gltf: "glTFImporter"):
         # Why tf this exists at all
         gltf.import_settings["disable_bone_shape"] = True
 
@@ -216,7 +223,7 @@ class glTF2ImportUserExtension:
         # Looks useful for some cases, but... not sure if it's worth to have it enabled by default
         gltf.import_settings["guess_original_bind_pose"] = False
 
-    def move_animation(self, gltf: glTFImporter):
+    def move_animation(self, gltf: "glTFImporter"):
         """Supercell also stores animations in the extension,
         so they also need to be moved to the animations for proper processing.
         Only one animation per file is possible."""
@@ -234,7 +241,7 @@ class glTF2ImportUserExtension:
             Animation([], {glTF_extension_name: animation}, None, name, [])
         )
 
-    def gather_import_gltf_before_hook(self, gltf: glTFImporter):
+    def gather_import_gltf_before_hook(self, gltf: "glTFImporter"):
         if not self.valid_gltf(gltf):
             return
 
@@ -253,15 +260,16 @@ class glTF2ImportUserExtension:
         gltf.supercell_vertex_accessor_offset = 0  # type: ignore
 
     def gather_import_node_before_hook(
-        self, vnode: VNode, node: Node | None, gltf: glTFImporter
+        self, vnode: VNode, node: Node | None, gltf: "glTFImporter"
     ):
-        """Some nodes (especially in animation files) may have invalid indices, we need to clean them up to avoid errors"""
         if not self.valid_gltf(gltf):
             return
 
         if node is None:
             return
 
+        # Some nodes (especially in animation files) may have invalid indices,
+        # we need to clean them up to avoid errors
         meshes_count = len(gltf.data.meshes or [])
         if node.mesh is not None:
             if node.mesh >= meshes_count:
@@ -271,7 +279,7 @@ class glTF2ImportUserExtension:
 
     def decode_mesh_attribute(
         self,
-        gltf: glTFImporter,
+        gltf: "glTFImporter",
         buffer_idx: int,
         attribute: dict,
         offset: int,
@@ -294,7 +302,7 @@ class glTF2ImportUserExtension:
 
         return (name, data)
 
-    def decode_mesh_info(self, gltf: glTFImporter, idx: int):
+    def decode_mesh_info(self, gltf: "glTFImporter", idx: int):
         descriptor = self.get_extension_descriptor(gltf) or {}
         mesh_infos: list[dict] = descriptor.get("meshDataInfos")  # type: ignore
         buffer_idx = descriptor.get("bufferView")
@@ -320,7 +328,7 @@ class glTF2ImportUserExtension:
 
         gltf.supercell_vertex_cache[idx] = attributes  # type: ignore
 
-    def decode_primitive(self, gltf: glTFImporter, primitive: MeshPrimitive):
+    def decode_primitive(self, gltf: "glTFImporter", primitive: MeshPrimitive):
         extensions = primitive.extensions
         if extensions is None:
             return
@@ -381,16 +389,25 @@ class glTF2ImportUserExtension:
                 i += 1
 
     def gather_import_mesh_options(
-        self, mesh_options, pymesh: Mesh, skin_idx, gltf: glTFImporter
+        self, mesh_options: Any, pymesh: Mesh, skin_idx, gltf: "glTFImporter"
     ):
         """Please khronos i need this. My glTF importer is kinda homeless"""
         if not self.valid_gltf(gltf):
             return
 
-        # sooo... since exporter settings up some settings at top-level of mesh conversion
+        # Story:
+        # Some of the bones has scale property in nodes (finger bones from grom_geo.glb Brawl Stars, for example)
+        # Well, most likely optimizer skill issue
+        # It`s works like this: During the rendering process, renderer multiplying nodes scale and the inverse matrix,
+        # which is resulting normal looking transformation,
+        # but for blender this behavior is very inconvenient and critical
+        # This exact option prevents mesh from transformation with most of the time broken scale value
+        # We will handle this case separately later
+        mesh_options.skin_into_bind_pose = False
+
+        # Sooo... since exporter setups some settings at top-level of mesh conversion
         # we need to decode all mesh infos here to have them ready for primitives decoding
         # not a good place but... there will be no peaceful solution
-
         gltf.supercell_vertex_accessor_offset = len(  # type: ignore #noqa
             gltf.data.accessors or []
         )
@@ -399,7 +416,7 @@ class glTF2ImportUserExtension:
             self.decode_primitive(gltf, primitive)
 
     def gather_import_material_before_hook(
-        self, gltf_material: Material, vertex_color: str, gltf: glTFImporter
+        self, gltf_material: Material, vertex_color: str, gltf: "glTFImporter"
     ):
         if not self.valid_gltf(gltf):
             return
@@ -422,7 +439,7 @@ class glTF2ImportUserExtension:
         gltf_material: Material,
         vertex_color,
         blender_mat: bpy.types.Material,
-        gltf: glTFImporter,
+        gltf: "glTFImporter",
     ):
         if not self.valid_gltf(gltf):
             return
@@ -447,14 +464,74 @@ class glTF2ImportUserExtension:
         importer = ShaderImporter(gltf, material, blender_mat, preset)
         importer.import_material()
 
+    def filter_deform_bones(self, gltf: "glTFImporter"):
+        vnodes: dict[Any, VNode] = gltf.vnodes  # type: ignore
+
+        deform_bones: list[int] = []
+        skins: list[Skin] = gltf.data.skins or []
+
+        # Create list of deform bones
+        for skin in skins:
+            deform_bones += skin.joints or []
+
+        # Set use_deform for each armature and bone
+        def visit(vnode_id: Any):
+            vnode: VNode = vnodes[vnode_id]
+
+            if vnode.type == VNode.Bone:
+                bone_arma = vnode.bone_arma  # type: ignore
+                arma_object: bpy.types.Object = vnodes[bone_arma].blender_object  # type: ignore
+                armature: bpy.types.Armature = arma_object.data # type: ignore
+
+                bone_name = vnode.blender_bone_name  # type: ignore
+                bone: bpy.types.Bone = armature.bones[bone_name] # type: ignore
+                bone.use_deform = vnode_id in deform_bones
+
+            for children in vnode.children:
+                visit(children)
+
+        visit("root")
+
+    def move_pose_bone_offset(self, bone: bpy.types.PoseBone):
+        default_scale = Vector((1.0, 1.0, 1.0))
+        if bone.scale != default_scale:
+            bone["scScaleOverride"] = bone.scale
+            bone.scale = default_scale
+
+    def move_pose_bones_offset(self, gltf: "glTFImporter"):
+        vnodes: dict[Any, VNode] = gltf.vnodes  # type: ignore
+
+        def visit(vnode_id: Any, armature: bpy.types.Object):
+            vnode: VNode = vnodes[vnode_id]
+
+            if vnode.type == VNode.Bone:
+                bone_name = vnode.blender_bone_name  # type: ignore
+                if armature.pose and armature.pose.bones[bone_name]:
+                    bone = armature.pose.bones[bone_name]
+                    self.move_pose_bone_offset(bone)
+
+            for children in vnode.children:
+                visit(children, armature)
+
+        for vnode in vnodes.values():
+            if vnode.type != VNode.Object and not vnode.is_arma:
+                continue
+
+            armature: bpy.types.Object = vnode.blender_object  # type: ignore
+            for children in vnode.children:
+                visit(children, armature)
+
     def gather_import_scene_after_nodes_hook(
-        self, gltf_scene, blender_scene: bpy.types.Scene, gltf
+        self, gltf_scene, blender_scene: bpy.types.Scene, gltf: "glTFImporter"
     ):
         if not self.valid_gltf(gltf):
             return
 
         if self.properties.adjust_colorspace:
             blender_scene.view_settings.view_transform = "Raw"  # type: ignore
+
+        self.filter_deform_bones(gltf)
+        self.move_pose_bones_offset(gltf)
 
     def do_animation_channel(
         self,
@@ -465,7 +542,7 @@ class glTF2ImportUserExtension:
         values: list,
         anim_idx: int,
         node_idx: int,
-        gltf: glTFImporter,
+        gltf: "glTFImporter",
     ):
         vnodes: Dict[Any, VNode] = gltf.vnodes  # type: ignore
         vnode: VNode = vnodes[node_idx]  # type: ignore
@@ -574,7 +651,7 @@ class glTF2ImportUserExtension:
                 group_name=group_name,
             )
 
-    def gather_import_animation_before_hook(self, anim_idx: int, gltf: glTFImporter):
+    def gather_import_animation_before_hook(self, anim_idx: int, gltf: "glTFImporter"):
         extensions = gltf.data.animations[anim_idx].extensions or {}
         descriptor = extensions.get(glTF_extension_name)
         if descriptor is None:

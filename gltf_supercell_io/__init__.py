@@ -17,6 +17,7 @@ from .importer.ui import draw_import
 from .importer import glTF2ImportUserExtension
 from .importer.patch import patch_importer
 from .exporter.patch import patch_exporter
+from .exporter.ibm_patch import patch_matrices
 from .com.editor.string_array import (
     StringItem,
     DirectoryStringItem,
@@ -86,6 +87,7 @@ def register():
     scene.sc_asset_browser = bpy.props.PointerProperty(type=AssetBrowserProperties)
 
     patch_importer()
+    patch_matrices()
     patch_exporter()
     start_asset_worker()
 
